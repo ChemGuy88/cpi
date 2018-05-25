@@ -4,8 +4,9 @@
 import os, pickle, sys
 import matplotlib.pyplot as plt
 import numpy as np
-from mlFunctions import tic, toc, beep, beeps, alarm
 from IPython import get_ipython
+from mlFunctions import tic, toc, beep, beeps, alarm
+from progress.bar import ChargingBar
 
 # Determine if running on Saturn server (Linux OS) or my personal machine (Darwin OS)
 OS = sys.platform
@@ -38,7 +39,7 @@ Meta-stuff
 # Relative path setup
 DIR0 = os.getcwd() +'/'
 if OS == 'darwin':
-    DIR = '/Users/Herman/Documents/jzhang/cpi copy/'
+    DIR = '/Users/Herman/Documents/jzhang/cpi/'
 elif OS == 'linux':
     DIR = '/home/herman/cpi/'
 
@@ -112,11 +113,33 @@ cidList = [int(cid[-9:]) for cid in list(cpi_dic.keys())]
 chunkSize = 190 # chunkSize is the number of length-9 CIDs (plus comma) that can fit into a URL, minus the approximately 100 other characters for the PUG request to PubChem servers.
 numChunks = np.ceil(len(cidList)/chunkSize)
 requestResults = []
-# j = 0 # For troubleshooting
-i = 0
+
+# ###
+numChunks = 5; print('Remove this scaffolding line\n')
+
+# Loop miscellanea
+bar = ChargingBar('Downloading CID information', max = numChunks)
+i = 0 # iterations, number of server requests
+j1 = 0 # index dummy variable
 Tic = tic()
+
+'''
+i1 = 0
+bar = ChargingBar('Downloading CID information', max = numChunks)
 for num in np.arange(numChunks):
-    tempList = cidList[:chunkSize]
+    i0 = i1
+    i1 = min( len(b), (num+1) * chunkSize )
+    print(b[i0:i1])
+    time.sleep(1)
+    bar.next()
+bar.finish()
+'''
+
+# Loop
+for num in np.arange(numChunks):
+    j0 = j1 # starting position index
+    j1 = min( len(cidList), (num+1) * chunkSize) # ending position index
+    tempList = cidList[j0:j1]
     cidChunk = ','.join([str(element) for element in tempList])
     URL = 'https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/'+cidChunk+'/synonyms/XML'
     R = requests.get(URL, headers = Headers)
@@ -125,7 +148,6 @@ for num in np.arange(numChunks):
     requestResults.extend(Found) # append results for processing later
 
     # PubChem requires that no more than 5 requests be made per second
-    j += 1
     i += 1
     Toc = toc(Tic, mute=True)
     if Toc.total_seconds() <= 1:
@@ -140,9 +162,10 @@ for num in np.arange(numChunks):
     elif Toc.total_seconds() > 1:
         i = 1
         Tic = tic()
-    # if j == 10:
-        # break
-    # Add progress bar
+
+    # Progress bar
+    bar.next()
+bar.finish()
 
 # Process html results to string lists
 cidSyns = {}
