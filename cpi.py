@@ -46,6 +46,8 @@ elif OS == 'linux':
 '''
 Create chemical-protein dictionary
 '''
+
+# Create argument for this
 if False:
     print('\nOpening file')
     Tic = tic()
