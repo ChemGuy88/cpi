@@ -66,17 +66,17 @@ def makeCpiDic(DIR):
     OUTPUT: cpiDic, a dictionary
             cpiDic.pickle, the pickled dictionary in directory [DIR]
     '''
-    print('\nOpening file')
+    # print('\nOpening file')
     Tic = tic()
     fname = DIR + 'STITCH Data/protein_chemical.links.v1.0.tsv'
     f = open(fname)
     lines = f.readlines()
     headers = lines[0]
     lines = lines[1:]
-    Toc = toc(Tic)
+    # Toc = toc(Tic)
 
     # Pre-process data
-    print('\nPreprocessing file')
+    # print('\nPreprocessing file')
     Tic = tic()
     Keys = []
     lolines = []
@@ -85,22 +85,22 @@ def makeCpiDic(DIR):
         lolines.append(l)
         Keys.append(l[0])
     Set = set(Keys)
-    Toc = toc(Tic)
+    # Toc = toc(Tic)
 
     # Initialize dictionary
-    print('\nInitializing dictionary')
+    # print('\nInitializing dictionary')
     Tic = tic()
     cpiDic = {}
     for key in Set:
         cpiDic[key] = []
-    Toc = toc(Tic)
+    # Toc = toc(Tic)
 
     # Create dictionary
-    print('\nCreating dictionary')
+    # print('\nCreating dictionary')
     Tic = tic()
     for l in lolines:
         cpiDic[l[0]].append( (l[1], l[2]))
-    Toc = toc(Tic)
+    # Toc = toc(Tic)
 
     # Pickle dictionary
     pname = DIR + 'cpiDic.pickle'
@@ -111,22 +111,23 @@ def makeCpiDic(DIR):
 
 '''
 ################################################################################
-##### Load pickled cpi dictionary ##############################################
+##### Load pickled dictionary ##################################################
 ################################################################################
 '''
 
-def loadCpiDic(DIR):
+def loadPickle(DIR, pickleName):
     '''
-    Assumes the pickled dictionary is named 'cpiDic.pickle'
+    Loads a pickled object
 
     INPUT:  DIR, string, the directory to read from and to.
-    RESULT: Loads 'DIR/cpiDic.pickle'
+            pickleName, a string, the name of the pickle file. Assumes suffix is not provided.
+    RESULT: Returns 'DIR pickleName', a pickle object
     '''
 
-    pname = DIR + 'cpiDic.pickle'
+    pname = '%s%s.pickle' % (DIR, pickleName)
     with open(pname, 'rb') as handle:
-        cpiDic = pickle.load(handle)
-    return cpiDic
+        pickleObj = pickle.load(handle)
+    return pickleObj
 
 '''
 ################################################################################
@@ -187,9 +188,17 @@ def downloadCidSyns(DIR, cpiDic):
     bar.finish()
 
     # Pickle requestResults
-    pname = DIR + 'requestResults.pickle'
-    with open(pname, 'wb') as handle:
-        pickle.dump(requestResults, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    Input = True
+    while Input:
+        try:
+            pname = DIR + 'requestResults.pickle'
+            with open(pname, 'wb') as handle:
+                pickle.dump(requestResults, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        except RecursionError as err
+            str = 'Maximum recursion depth (%d) exceeded while calling a Python object. Would you like to increase it?\nEnter the NEW RECURSION LIMIT or press \'ENTER\' to cancel' % sys.getrecursionlimit()
+            Input = input(str)
+            if Input == '':
+                break
 
     return request
 
@@ -219,18 +228,18 @@ def makeCidSynsDic(DIR, cpiDic):
         requestResults = downloadCidSyns(DIR, cpiDic)
 
     # Process html results to list of strings
-    CidSynsDic = {}
+    cidSynsDic = {}
     for cid in requestResults:
         name = cid.cid.text
         syns = [syn.text for syn in cid.findAll('synonym')]
-        CidSynsDic[name] = syns
+        cidSynsDic[name] = syns
 
-    # Pickle CidSynsDic
+    # Pickle cidSynsDic
     pname = DIR + 'cidSynsDic.pickle'
     with open(pname, 'wb') as handle:
-        pickle.dump(CidSynsDic, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        pickle.dump(cidSynsDic, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-    return CidSynsDic
+    return cidSynsDic
 
 '''
 ################################################################################
@@ -240,11 +249,10 @@ def makeCidSynsDic(DIR, cpiDic):
 
 def main():
     # Can add DIR option to overwrite default DIR value
-    # How can I implement the option to run and load an object into the interpreter?
     if len(sys.argv) > 1:
         args = sys.argv[1:]
     else:
-        msg = '\ncpi.py requires arguments to run. Try the following:\n\
+        msg = '\ncpi.py requires arguments to run. Try the following:\n\n\
         \'makeCpiDic\'          -- create CPI dictionary\n\
         \'loadCpiDic\'          -- load CPI dictionary\n\
         \'makeCidSynsDic\'      -- create CID synonyms dictionary\n\
@@ -259,21 +267,41 @@ def main():
             url = 'https://stackoverflow.com/questions/48571212/why-is-sys-exit-causing-a-traceback'
             print('Traceback is printed on exit when using \'python -i\'. This is a Python bug that has already been reported. Note this does not happen with \'IPython -i\'. Refer to %s.\n' % url)
             sys.exit(0)
+
+    # Work sequence
+    results = []
     if 'makeCpiDic' in args:
         try:
             cpiDic = makeCpiDic(DIR)
         except FileNotFoundError:
-            print('The file was not found. Check the \'DIR\' variable to see if it is pointing to a valid directory.\n\'DIR\' is pointing to %s.\n\n' % DIR)
-    elif 'loadCpiDic' in args:
-        print('Sorry, this has not been implemented to run from the command line, yet.')
-    elif 'makeCidSynsDic' in args:
+            print('\nThe file was not found. Check the \'DIR\' variable to see if it is pointing to a valid directory.\n\'DIR\' is pointing to %s.\n' % DIR)
+        results.append('# cpiDic was created.')
+    if 'loadCpiDic' in args:
         try:
-            cpiDic = loadCpiDic(DIR)
-            CidSynsDic = makeCidSynsDic(DIR, cpiDic)
+            cpiDic = loadPickle(DIR, 'cpiDic') # It'd be great if I could load this directly to interpreter.
+            results.append('cpiDic = loadPickle(DIR, \'cpiDic\')')
         except FileNotFoundError:
-            print('The file was not found. Try running \'makeCpiDic\' first, or check the \'DIR\' variable to see if it is pointing to a valid directory.\n\'DIR\' is pointing to %s.\n\n' % DIR)
-    elif 'loadCidSynsDic' in args:
-        print('Sorry, this has not been implemented to run from the command line, yet.')
+            print('\nloadCpiDic error.\n\
+    The file was not found. Check the \'DIR\' variable to see if it is pointing to a valid directory or if the file exists.\n\'DIR\' is pointing to %s.\n' % DIR)
+    if 'makeCidSynsDic' in args:
+        try:
+            cpiDic = loadPickle(DIR, 'cpiDic')
+            cidSynsDic = makeCidSynsDic(DIR, cpiDic)
+        except FileNotFoundError:
+            print('\nmakeCidSynsDic error.\n\
+    The file was not found. Try running \'makeCpiDic\' first, or check the \'DIR\' variable to see if it is pointing to a valid directory.\n\'DIR\' is pointing to %s.\n' % DIR)
+        results.append('# cidSynsDic was created.')
+    if 'loadCidSynsDic' in args:
+        try:
+            cidSynsDic = loadPickle(DIR, 'cidSynsDic')
+            results.append('cidSynsDic = loadPickle(DIR, \'cidSynsDic\')')
+        except FileNotFoundError:
+            print('\nloadCidSynsDic error.\n\
+    The file was not found. Check the \'DIR\' variable to see if it is pointing to a valid directory or if the file exists.\n\'DIR\' is pointing to %s.\n' % DIR)
+    # Convenient list to copy and paste into IPython
+    print('Commands executed. Copy and paste the below lines to load results into the interpreter.\n')
+    for r in results:
+        print(r)
 
 # Boilerplate
 if __name__ == '__main__':
