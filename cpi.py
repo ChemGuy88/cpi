@@ -175,7 +175,7 @@ def downloadCidSyns(DIR, cpiDic):
                 i = 0
                 Tic = tic()
             elif i < 5:
-                continue
+                pass
             elif i > 5:
                 print('This isn\'t supposed to happen!')
         elif Toc.total_seconds() > 1:
@@ -185,7 +185,7 @@ def downloadCidSyns(DIR, cpiDic):
         # Progress bar
         bar.next()
     bar.finish()
-reques
+
     # Pickle requestResults
     pname = DIR + 'requestResults.pickle'
     with open(pname, 'wb') as handle:
@@ -205,15 +205,20 @@ def makeCidSynsDic(DIR, cpiDic):
     OUTPUT: cidSynsDic, a dic, the dictionary of CID synonyms.
     '''
 
-    # Detect requestResults pickle. If found, load and process. Else, download, save, and process.
-    print('Not implemented yet.')
-    sys.exit()
-    if True:
-        requestResults = downloadCidSyns(DIR, cpiDic)
+    # Determine if requestResults pickle exists. If found, load and process. Else, download, save, and process.
+    if 'requestResults.pickle' in os.listdir(DIR):
+        requestResults = pickle.load( open( 'requestResults.pickle', 'rb' ) )
+        # Make sure sizes match
+        if not len(requestResults) == len(cpiDic):
+            Choice = input('Warning, the lengths of the pickled synonyms (requestResults) and the dictionary of CPIs are of different lengths. This implies data that do not match. Continue?\nEnter \'n\' to cancel, or \'Return\' to continue.')
+            if Choice == 'n':
+                print('You entered \'n\'. Exiting...')
+                time.sleep(3)
+                sys.exit()
     else:
-        continue
+        requestResults = downloadCidSyns(DIR, cpiDic)
 
-    # Process html results to string lists
+    # Process html results to list of strings
     CidSynsDic = {}
     for cid in requestResults:
         name = cid.cid.text
@@ -240,11 +245,11 @@ def main():
         args = sys.argv[1:]
     else:
         msg = '\ncpi.py requires arguments to run. Try the following:\n\
-                \'makeCpiDic\'          -- create CPI dictionary\n\
-                \'loadCpiDic\'          -- load CPI dictionary\n\
-                \'makeCidSynsDic\'      -- create CID synonyms dictionary\n\
-                \'loadCidSynsDic\'      -- load the CID synonyms dictionary\n\
-                \n'
+        \'makeCpiDic\'          -- create CPI dictionary\n\
+        \'loadCpiDic\'          -- load CPI dictionary\n\
+        \'makeCidSynsDic\'      -- create CID synonyms dictionary\n\
+        \'loadCidSynsDic\'      -- load the CID synonyms dictionary\n\
+        \n'
         print(msg)
 
         # Temporary, until bug resolved
