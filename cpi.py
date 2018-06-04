@@ -237,7 +237,6 @@ def makeCidSynsDic(DIR, cpiDic):
     '''
 
     # The pickle check is unnecessary because the object is a beautifulSoup object, which cannot be pickled. It is highly recursive. There is no time wasted between its conception and the cidSynsDic creation (just a few lines of code), so no point in pickling it.
-    '''
     # Determine if requestResults pickle exists. If found, load and process. Else, download, save, and process.
     if 'requestResults.pickle' in os.listdir(DIR):
         # Make sure it's not empty
@@ -281,7 +280,7 @@ Enter \'a\', \'b\', or \'c\'\n'
                 sys.exit()
     else:
         requestResults = downloadCidSyns(DIR, cpiDic)
-    '''
+
 
     # Process html results to list of strings
     cidSynsDic = {}
