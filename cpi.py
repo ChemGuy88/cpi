@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import os, pickle, requests, sys, traceback
+import json, os, pickle, re, requests, sys, traceback
 import matplotlib.pyplot as plt
 import numpy as np
 from bs4 import BeautifulSoup
@@ -149,8 +149,9 @@ def downloadCidSyns(DIR, cpiDic, savePickle=False):
     numChunks = np.ceil(len(cidList)/chunkSize)
 
     # Troubleshooting
+    # Comment this, because it's useful and I'll probably need it in the future.
     oldNumChunks = numChunks
-    numChunks = int(np.ceil(numChunks * 0.10))
+    numChunks = int(np.ceil(numChunks * 0.05))
     print('Troubleshooting\nReplaced old numChunks size (%d) with %d\n' % (oldNumChunks, numChunks))
 
     requestResults = []
@@ -200,8 +201,7 @@ def downloadCidSyns(DIR, cpiDic, savePickle=False):
     # R = requestResults[0]
     # l = [thing for thing in R.strings]
     # See https://stackoverflow.com/questions/16367104/why-does-this-pickle-reach-maximum-recursion-depth-without-recursion
-    whileGate = savePickle
-    while whileGate:
+    while savePickle:
         try:
             pname = DIR + 'requestResults.pickle'
             with open(pname, 'wb') as handle:
@@ -209,7 +209,7 @@ def downloadCidSyns(DIR, cpiDic, savePickle=False):
             whileGate = False
         except RecursionError as err:
             recursionLimit = sys.getrecursionlimit()
-            msg = 'Maximum recursion depth (%d) exceeded while calling a Python object. Would you like to increase it?\nEnter the NEW RECURSION LIMIT or press \'ENTER\' to cancel' % recursionLimit
+            msg = 'Maximum recursion depth (%d) exceeded while calling a Python object. Would you like to increase it?\nEnter the NEW RECURSION LIMIT or press \'ENTER\' to cancel. (The system limit is somewhere between 30,000 and 40,000)' % recursionLimit
             Input = input(msg)
             # Turn input into int, if possible
             if Input == '':
@@ -236,24 +236,52 @@ def makeCidSynsDic(DIR, cpiDic):
     OUTPUT: cidSynsDic, a dic, the dictionary of CID synonyms.
     '''
 
+    # The pickle check is unnecessary because the object is a beautifulSoup object, which cannot be pickled. It is highly recursive. There is no time wasted between its conception and the cidSynsDic creation (just a few lines of code), so no point in pickling it.
+    '''
     # Determine if requestResults pickle exists. If found, load and process. Else, download, save, and process.
     if 'requestResults.pickle' in os.listdir(DIR):
-        requestResults = pickle.load( open( 'requestResults.pickle', 'rb' ) )
         # Make sure it's not empty
-        isEmpty = os.stat("file").st_size == 0
-        # Make sure sizes match
-        isDifferentLengths = len(requestResults) == len(cpiDic)
-        # Inform user
+        isEmpty = os.stat(DIR + 'requestResults.pickle').st_size == 0
         if isEmpty:
             requestResults = downloadCidSyns(DIR, cpiDic)
-        elif isDifferentLengths:
-            Choice = input('Warning, the lengths of the pickled synonyms (requestResults) and the dictionary of CPIs are of different lengths. This implies data that do not match. Continue?\nEnter \'n\' to cancel, or \'Return\' to continue.')
-        # Process Choice
-        if Choice == 'n':
-            print('You entered \'n\'. Exiting...')
-            sys.exit()
+        else:
+            requestResults = pickle.load( open( DIR + 'requestResults.pickle', 'rb' ) )
+        # Make sure lengths match
+        isDifferentLengths = len(requestResults) != len(cpiDic)
+        # Inform user of mismatching lengths
+        if isDifferentLengths:
+            isBadInput = True
+            while isBadInput:
+                text = 'Warning, the lengths of the pickled synonyms (requestResults) and the dictionary of CPIs are of different lengths. This implies data that do not match. Choose your option:\n\
+\n\
+a). Download synonyms again\n\
+b). Use pickled synonyms\n\
+c). Exit program\n\
+\n\
+Enter \'a\', \'b\', or \'c\'\n'
+                Input = input(text)
+                regex = re.findall('[abc]', Input)
+                if len(regex) != 1:
+                    isBadInput = True
+                else:
+                    Choice = regex[0]
+                    isBadInput = Choice not in ['a','b','c'];
+                ### Separate if-statements
+                if isBadInput:
+                    print('\nIncorrect input. Choose \'a\', \'b\', or \'c\'')
+                else:
+                    isBadInput = False
+            if Choice == 'a':
+                print('You entered \'a\'. Downloading again')
+                requestResults = downloadCidSyns(DIR, cpiDic)
+            elif Choice == 'b':
+                print('You entered \'b\'. Using available synonyms.')
+            elif Choice == 'c':
+                print('You entered \'c\'. Exiting...')
+                sys.exit()
     else:
         requestResults = downloadCidSyns(DIR, cpiDic)
+    '''
 
     # Process html results to list of strings
     cidSynsDic = {}
@@ -261,6 +289,11 @@ def makeCidSynsDic(DIR, cpiDic):
         name = cid.cid.text
         syns = [syn.text for syn in cid.findAll('synonym')]
         cidSynsDic[name] = syns
+
+    # Save requestResults as JSON
+    file = open(DIR + 'cidSynsDic.JSON', 'w')
+    json.dump(cidSynsDic, file)
+    file.close()
 
     # Pickle cidSynsDic
     pname = DIR + 'cidSynsDic.pickle'
@@ -324,29 +357,37 @@ def main():
             cpiDic = makeCpiDic(DIR)
         except FileNotFoundError:
             print('\nThe file was not found. Check the \'DIR\' variable to see if it is pointing to a valid directory.\n\'DIR\' is pointing to %s.\n' % DIR)
-        results.append('# cpiDic was created.')
+        else:
+            results.append('# cpiDic was created.')
     if 'loadCpiDic' in args:
         try:
             cpiDic = loadPickle(DIR, 'cpiDic') # It'd be great if I could load this directly to interpreter.
-            results.append('cpiDic = loadPickle(DIR, \'cpiDic\')')
         except FileNotFoundError:
             print('\nloadCpiDic error.\n\
     The file was not found. Check the \'DIR\' variable to see if it is pointing to a valid directory or if the file exists.\n\'DIR\' is pointing to %s.\n' % DIR)
+        except:
+            print("Unexpected error:", sys.exc_info()[0])
+        else:
+            results.append('cpiDic = loadPickle(DIR, \'cpiDic\')')
     if 'makeCidSynsDic' in args:
         try:
             cpiDic = loadPickle(DIR, 'cpiDic')
-            cidSynsDic = makeCidSynsDic(DIR, cpiDic)
         except FileNotFoundError:
             print('\nmakeCidSynsDic error.\n\
     The file was not found. Try running \'makeCpiDic\' first, or check the \'DIR\' variable to see if it is pointing to a valid directory.\n\'DIR\' is pointing to %s.\n' % DIR)
-        results.append('# cidSynsDic was created.')
+        except:
+            print("Unexpected error:", sys.exc_info()[0])
+        else:
+            cidSynsDic = makeCidSynsDic(DIR, cpiDic)
+            results.append('# cidSynsDic was created.')
     if 'loadCidSynsDic' in args:
         try:
             cidSynsDic = loadPickle(DIR, 'cidSynsDic')
-            results.append('cidSynsDic = loadPickle(DIR, \'cidSynsDic\')')
         except FileNotFoundError:
             print('\nloadCidSynsDic error.\n\
     The file was not found. Check the \'DIR\' variable to see if it is pointing to a valid directory or if the file exists.\n\'DIR\' is pointing to %s.\n' % DIR)
+        else:
+            results.append('cidSynsDic = loadPickle(DIR, \'cidSynsDic\')')
     # Convenient list to copy and paste into IPython
     print('Commands executed. Copy and paste the below lines to load results into the interpreter.\n')
     for r in results:
