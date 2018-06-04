@@ -73,30 +73,30 @@ if False:
     # Initialize dictionary
     print('\nInitializing dictionary')
     Tic = tic()
-    cpi_dic = {}
+    cpiDic = {}
     for key in Set:
-        cpi_dic[key] = []
+        cpiDic[key] = []
     Toc = toc(Tic)
 
     # Create dictionary
     print('\nCreating dictionary')
     Tic = tic()
     for l in lolines:
-        cpi_dic[l[0]].append( (l[1], l[2]))
+        cpiDic[l[0]].append( (l[1], l[2]))
     Toc = toc(Tic)
 
     # Pickle dictionary
-    pname = DIR + 'cpi_dic.pickle'
+    pname = DIR + 'cpiDic.pickle'
     with open(pname, 'wb') as handle:
-        pickle.dump(cpi_dic, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        pickle.dump(cpiDic, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 '''
 Load pickled cpi dictionary
 '''
 # Load pickle
-pname = DIR + 'cpi_dic.pickle'
+pname = DIR + 'cpiDic.pickle'
 with open(pname, 'rb') as handle:
-    cpi_dic = pickle.load(handle)
+    cpiDic = pickle.load(handle)
 
 '''
 Create synonyms dictionary
@@ -110,7 +110,7 @@ from bs4 import BeautifulSoup
 UserAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/11.1 Safari/605.1.15'
 Headers = { 'User-Agent': UserAgent}
 
-cidList = [int(cid[-9:]) for cid in list(cpi_dic.keys())]
+cidList = [int(cid[-9:]) for cid in list(cpiDic.keys())]
 
 chunkSize = 190 # chunkSize is the number of length-9 CIDs (plus comma) that can fit into a URL, minus the approximately 100 other characters for the PUG request to PubChem servers.
 numChunks = np.ceil(len(cidList)/chunkSize)
