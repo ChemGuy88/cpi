@@ -135,24 +135,29 @@ def loadPickle(DIR, pickleName):
 ################################################################################
 '''
 
-def downloadCidSyns(DIR, cpiDic, savePickle=False):
+def downloadCidSyns(cpiDic, alarm=alarm1, Troubleshooting=False):
     '''
-    It takes less than 10 minutes to download all the synonyms for the STITCH CPI database on residential broadband
+    Download all synonyms for a given list of PubChem Compound ID (CID) numbers using PubChem's PUG REST utility. It takes less than 10 minutes to download all the synonyms for the STITCH CPI database on residential broadband.
+
+    INPUT:  cpiDic, a Python dictionary. The list of CIDs is extract from this. This could be changed later to be instead cidList, to allow or more general use.
+            alarm, an object (default: alarm = alarm1). This object will be called at the end of the function, when all the synonyms are finished downloading. By default \'alarm1\' is called, which is a series of high and low pitch tones executed in Bash using the operating system.
+    OUTPUT: requestResults, a BeautifulSoup4 object.
     '''
 
     UserAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/11.1 Safari/605.1.15'
     Headers = {'User-Agent': UserAgent}
 
+    # Extract list of CIDs from dictionary
     cidList = [int(cid[-9:]) for cid in list(cpiDic.keys())]
 
     chunkSize = 190 # chunkSize is the number of length-9 CIDs (plus comma) that can fit into a URL, minus the approximately 100 other characters for the PUG request to PubChem servers.
     numChunks = np.ceil(len(cidList)/chunkSize)
 
-    # Troubleshooting
-    # Comment this, because it's useful and I'll probably need it in the future.
-    oldNumChunks = numChunks
-    numChunks = int(np.ceil(numChunks * 0.05))
-    print('Troubleshooting\nReplaced old numChunks size (%d) with %d\n' % (oldNumChunks, numChunks))
+    # Troubleshooting; Shorten the list
+    if Troubleshooting:
+        oldNumChunks = numChunks
+        numChunks = int(np.ceil(numChunks * 0.05))
+        print('Troubleshooting\nReplaced old numChunks size (%d) with %d\n' % (oldNumChunks, numChunks))
 
     requestResults = []
 
@@ -193,34 +198,7 @@ def downloadCidSyns(DIR, cpiDic, savePickle=False):
         # Progress bar
         bar.next()
     bar.finish()
-    alarm1()
-
-    # Pickle requestResults
-    # I think requestResults cannot be pickled because it's a bs4 object. I can turn them into Python string objects or save as JSON, instead of Pickle
-    # For example:
-    # R = requestResults[0]
-    # l = [thing for thing in R.strings]
-    # See https://stackoverflow.com/questions/16367104/why-does-this-pickle-reach-maximum-recursion-depth-without-recursion
-    while savePickle:
-        try:
-            pname = DIR + 'requestResults.pickle'
-            with open(pname, 'wb') as handle:
-                pickle.dump(requestResults, handle, protocol=pickle.HIGHEST_PROTOCOL)
-            whileGate = False
-        except RecursionError as err:
-            recursionLimit = sys.getrecursionlimit()
-            msg = 'Maximum recursion depth (%d) exceeded while calling a Python object. Would you like to increase it?\nEnter the NEW RECURSION LIMIT or press \'ENTER\' to cancel. (The system limit is somewhere between 30,000 and 40,000)' % recursionLimit
-            Input = input(msg)
-            # Turn input into int, if possible
-            if Input == '':
-                break
-            else:
-                try:
-                    Input = int(Input)
-                    print('Setting new recursion limit to %d' % Input)
-                    sys.setrecursionlimit(Input)
-                except:
-                    print('Incorrect input type. Enter an integer value greater than %d to set a new recursion limit, or press \'ENTER\' to cancel' % recursionLimit)
+    alarm()
 
     return requestResults
 
@@ -236,51 +214,8 @@ def makeCidSynsDic(DIR, cpiDic):
     OUTPUT: cidSynsDic, a dic, the dictionary of CID synonyms.
     '''
 
-    # The pickle check is unnecessary because the object is a beautifulSoup object, which cannot be pickled. It is highly recursive. There is no time wasted between its conception and the cidSynsDic creation (just a few lines of code), so no point in pickling it.
-    # Determine if requestResults pickle exists. If found, load and process. Else, download, save, and process.
-    if 'requestResults.pickle' in os.listdir(DIR):
-        # Make sure it's not empty
-        isEmpty = os.stat(DIR + 'requestResults.pickle').st_size == 0
-        if isEmpty:
-            requestResults = downloadCidSyns(DIR, cpiDic)
-        else:
-            requestResults = pickle.load( open( DIR + 'requestResults.pickle', 'rb' ) )
-        # Make sure lengths match
-        isDifferentLengths = len(requestResults) != len(cpiDic)
-        # Inform user of mismatching lengths
-        if isDifferentLengths:
-            isBadInput = True
-            while isBadInput:
-                text = 'Warning, the lengths of the pickled synonyms (requestResults) and the dictionary of CPIs are of different lengths. This implies data that do not match. Choose your option:\n\
-\n\
-a). Download synonyms again\n\
-b). Use pickled synonyms\n\
-c). Exit program\n\
-\n\
-Enter \'a\', \'b\', or \'c\'\n'
-                Input = input(text)
-                regex = re.findall('[abc]', Input)
-                if len(regex) != 1:
-                    isBadInput = True
-                else:
-                    Choice = regex[0]
-                    isBadInput = Choice not in ['a','b','c'];
-                ### Separate if-statements
-                if isBadInput:
-                    print('\nIncorrect input. Choose \'a\', \'b\', or \'c\'')
-                else:
-                    isBadInput = False
-            if Choice == 'a':
-                print('You entered \'a\'. Downloading again')
-                requestResults = downloadCidSyns(DIR, cpiDic)
-            elif Choice == 'b':
-                print('You entered \'b\'. Using available synonyms.')
-            elif Choice == 'c':
-                print('You entered \'c\'. Exiting...')
-                sys.exit()
-    else:
-        requestResults = downloadCidSyns(DIR, cpiDic)
-
+    # Download synonyms
+    requestResults = downloadCidSyns(cpiDic)
 
     # Process html results to list of strings
     cidSynsDic = {}
@@ -318,7 +253,7 @@ try:
 except NameError:
     import cpi
 from cpi import downloadCidSyns
-requestResults = downloadCidSyns(DIR, cpiDic)
+requestResults = downloadCidSyns(cpiDic)
 
 '''
 
