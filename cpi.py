@@ -2,10 +2,9 @@
 # -*- coding: utf-8 -*-
 
 import json, os, pickle, re, requests, sys, traceback
-import matplotlib.pyplot as plt
+# matplotlib.pyplot is imported below, conditional on the Operating System
 import numpy as np
 from bs4 import BeautifulSoup
-# from IPython import get_ipython
 from mlFunctions import tic, toc, beep, alarm1, run_from_ipython
 from progress.bar import ChargingBar
 
@@ -24,12 +23,6 @@ Project Name:
 Meta-stuff
 '''
 
-# For running IPython magic commands (e.g., %matplotlib)
-# ipython = get_ipython()
-
-# Use latex in matplotlib
-# plt.rc('text', usetex=True)
-
 # Determine if running on Saturn server (Linux OS) or my personal machine (Darwin OS)
 OS = sys.platform
 
@@ -40,13 +33,28 @@ if OS == 'darwin':
 elif OS == 'linux':
     DIR = '/home/herman/cpi/'
 
-# Display plots inline and change default figure size
+# Display plots inline if on Mac, otherwise use settings friendlier to Saturn server.
 if OS == 'darwin':
-    pass
-    # ipython.magic("matplotlib")
+    import matplotlib.pyplot as plt
+    # For running IPython magic commands (e.g., %matplotlib)
+    from IPython import get_ipython
+    ipython = get_ipython()
+    ipython.magic("matplotlib") # enable interactive graphs.
 elif OS == 'linux':
-    # matplotlib.use("Agg")
-    pass
+    # add message to explain that if matplotlib backend can't be set with use(), to edit the matplotlibrc file as per https://matplotlib.org/users/customizing.html#the-matplotlibrc-file
+    # Would be nice if I could catch matplotlib warning using matplotlib.warnings
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+else:
+    # Same message as for 'linux' case.
+    print('You are not running a supported Operating System.')
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+
+# Use latex in matplotlib
+# plt.rc('text', usetex=True)
 
 '''
 Notes
@@ -135,7 +143,7 @@ def loadPickle(DIR, pickleName):
 ################################################################################
 '''
 
-def downloadCidSyns(cpiDic, alarm=alarm1, Troubleshooting=False):
+def downloadCidSyns(cpiDic, alarm=alarm1, Troubleshooting=True):
     '''
     Download all synonyms for a given list of PubChem Compound ID (CID) numbers using PubChem's PUG REST utility. It takes less than 10 minutes to download all the synonyms for the STITCH CPI database on residential broadband.
 
@@ -290,7 +298,8 @@ def main():
         try:
             cpiDic = makeCpiDic(DIR)
         except FileNotFoundError:
-            print('\nThe file was not found. Check the \'DIR\' variable to see if it is pointing to a valid directory.\n\'DIR\' is pointing to %s.\n' % DIR)
+            print('\nmakeCpiDic error.\n\
+    The file was not found. Check the \'DIR\' variable to see if it is pointing to a valid directory, or if the STITCH data is present.\n\'DIR\' is pointing to %s.\n' % DIR)
         else:
             results.append('# cpiDic was created.')
     if 'loadCpiDic' in args:
@@ -323,9 +332,10 @@ def main():
         else:
             results.append('cidSynsDic = loadPickle(DIR, \'cidSynsDic\')')
     # Convenient list to copy and paste into IPython
-    print('Commands executed. Copy and paste the below lines to load results into the interpreter.\n')
-    for r in results:
-        print(r)
+    if len(results) > 0:
+        print('Commands executed. Copy and paste the below lines to load results into the interpreter.\n')
+        for r in results:
+            print(r)
 
 # Boilerplate
 if __name__ == '__main__':
