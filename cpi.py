@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from bs4 import BeautifulSoup
 # from IPython import get_ipython
-from mlFunctions import tic, toc, beep, beeps, alarm, run_from_ipython
+from mlFunctions import tic, toc, beep, alarm1, run_from_ipython
 from progress.bar import ChargingBar
 
 '''
@@ -135,7 +135,7 @@ def loadPickle(DIR, pickleName):
 ################################################################################
 '''
 
-def downloadCidSyns(DIR, cpiDic):
+def downloadCidSyns(DIR, cpiDic, savePickle=False):
     '''
     It takes less than 10 minutes to download all the synonyms for the STITCH CPI database on residential broadband
     '''
@@ -147,6 +147,12 @@ def downloadCidSyns(DIR, cpiDic):
 
     chunkSize = 190 # chunkSize is the number of length-9 CIDs (plus comma) that can fit into a URL, minus the approximately 100 other characters for the PUG request to PubChem servers.
     numChunks = np.ceil(len(cidList)/chunkSize)
+
+    # Troubleshooting
+    oldNumChunks = numChunks
+    numChunks = int(np.ceil(numChunks * 0.10))
+    print('Troubleshooting\nReplaced old numChunks size (%d) with %d\n' % (oldNumChunks, numChunks))
+
     requestResults = []
 
     # Loop miscellanea
@@ -186,21 +192,37 @@ def downloadCidSyns(DIR, cpiDic):
         # Progress bar
         bar.next()
     bar.finish()
+    alarm1()
 
     # Pickle requestResults
-    Input = True
-    while Input:
+    # I think requestResults cannot be pickled because it's a bs4 object. I can turn them into Python string objects or save as JSON, instead of Pickle
+    # For example:
+    # R = requestResults[0]
+    # l = [thing for thing in R.strings]
+    # See https://stackoverflow.com/questions/16367104/why-does-this-pickle-reach-maximum-recursion-depth-without-recursion
+    whileGate = savePickle
+    while whileGate:
         try:
             pname = DIR + 'requestResults.pickle'
             with open(pname, 'wb') as handle:
                 pickle.dump(requestResults, handle, protocol=pickle.HIGHEST_PROTOCOL)
-        except RecursionError as err
-            str = 'Maximum recursion depth (%d) exceeded while calling a Python object. Would you like to increase it?\nEnter the NEW RECURSION LIMIT or press \'ENTER\' to cancel' % sys.getrecursionlimit()
-            Input = input(str)
+            whileGate = False
+        except RecursionError as err:
+            recursionLimit = sys.getrecursionlimit()
+            msg = 'Maximum recursion depth (%d) exceeded while calling a Python object. Would you like to increase it?\nEnter the NEW RECURSION LIMIT or press \'ENTER\' to cancel' % recursionLimit
+            Input = input(msg)
+            # Turn input into int, if possible
             if Input == '':
                 break
+            else:
+                try:
+                    Input = int(Input)
+                    print('Setting new recursion limit to %d' % Input)
+                    sys.setrecursionlimit(Input)
+                except:
+                    print('Incorrect input type. Enter an integer value greater than %d to set a new recursion limit, or press \'ENTER\' to cancel' % recursionLimit)
 
-    return request
+    return requestResults
 
 def makeCidSynsDic(DIR, cpiDic):
     '''
@@ -217,13 +239,19 @@ def makeCidSynsDic(DIR, cpiDic):
     # Determine if requestResults pickle exists. If found, load and process. Else, download, save, and process.
     if 'requestResults.pickle' in os.listdir(DIR):
         requestResults = pickle.load( open( 'requestResults.pickle', 'rb' ) )
+        # Make sure it's not empty
+        isEmpty = os.stat("file").st_size == 0
         # Make sure sizes match
-        if not len(requestResults) == len(cpiDic):
+        isDifferentLengths = len(requestResults) == len(cpiDic)
+        # Inform user
+        if isEmpty:
+            requestResults = downloadCidSyns(DIR, cpiDic)
+        elif isDifferentLengths:
             Choice = input('Warning, the lengths of the pickled synonyms (requestResults) and the dictionary of CPIs are of different lengths. This implies data that do not match. Continue?\nEnter \'n\' to cancel, or \'Return\' to continue.')
-            if Choice == 'n':
-                print('You entered \'n\'. Exiting...')
-                time.sleep(3)
-                sys.exit()
+        # Process Choice
+        if Choice == 'n':
+            print('You entered \'n\'. Exiting...')
+            sys.exit()
     else:
         requestResults = downloadCidSyns(DIR, cpiDic)
 
@@ -240,6 +268,27 @@ def makeCidSynsDic(DIR, cpiDic):
         pickle.dump(cidSynsDic, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     return cidSynsDic
+
+'''
+################################################################################
+##### Troubleshooting ############################################
+################################################################################
+'''
+
+'''
+from importlib import reload
+
+from cpi import DIR, loadPickle
+cpiDic = loadPickle(DIR, 'cpiDic')
+
+try:
+    reload(cpi)
+except NameError:
+    import cpi
+from cpi import downloadCidSyns
+requestResults = downloadCidSyns(DIR, cpiDic)
+
+'''
 
 '''
 ################################################################################
