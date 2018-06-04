@@ -1,4 +1,4 @@
-# Chemical-Protein Interactions Discovery with Deep-Learning
+# Chemical-Protein Interactions (CPI) Discovery with Deep-Learning
 
 ## Authors
 
@@ -6,7 +6,7 @@ This is a python module under development by the Jinfeng Zhang lab group at the 
 
 ## Purpose
 
-This module downloads and creates datasets for use in deep learning.
+This module downloads and creates datasets for use in deep learning. This is used in conjunction with Protein-Protein Interaction (PPI) data, Gene-Protein Interaction (GPI) data, etc.
 
 ## Usage
 
