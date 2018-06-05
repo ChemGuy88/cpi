@@ -33,6 +33,7 @@ if OS == 'darwin':
 elif OS == 'linux':
     DIR = '/home/herman/cpi/'
 
+# I think this whole block can be erased. The problem I have is explained by this SO post: https://stackoverflow.com/questions/28905725/tclerror-no-display-name-and-no-display-environment-variable-on-ec2
 # Display plots inline if on Mac, otherwise use settings friendlier to Saturn server.
 if OS == 'darwin':
     import matplotlib.pyplot as plt
@@ -143,7 +144,7 @@ def loadPickle(DIR, pickleName):
 ################################################################################
 '''
 
-def downloadCidSyns(cpiDic, alarm=alarm1, Troubleshooting=True):
+def downloadCidSyns(cpiDic, alarm=alarm1, Troubleshooting=False):
     '''
     Download all synonyms for a given list of PubChem Compound ID (CID) numbers using PubChem's PUG REST utility. It takes less than 10 minutes to download all the synonyms for the STITCH CPI database on residential broadband.
 
@@ -246,7 +247,7 @@ def makeCidSynsDic(DIR, cpiDic):
 
 '''
 ################################################################################
-##### Troubleshooting ############################################
+##### Troubleshooting ##########################################################
 ################################################################################
 '''
 
