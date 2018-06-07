@@ -2,9 +2,10 @@
 # -*- coding: utf-8 -*-
 
 import json, os, pickle, re, requests, sys, traceback
-# matplotlib.pyplot is imported below, conditional on the Operating System
+import matplotlib.pyplot as plt
 import numpy as np
 from bs4 import BeautifulSoup
+from IPython import get_ipython
 from mlFunctions import tic, toc, beep, alarm1, run_from_ipython
 from progress.bar import ChargingBar
 
@@ -16,12 +17,14 @@ Project Name:
     It is recommended to run this in the command line thus:
 
     $ ipython3 -i -m cpi
-
 '''
 
 '''
 Meta-stuff
 '''
+
+ipython = get_ipython()
+ipython.magic("matplotlib") # Same as %matplotlib, turn on interactive plotting in IPython
 
 # Determine if running on Saturn server (Linux OS) or my personal machine (Darwin OS)
 OS = sys.platform
@@ -33,29 +36,8 @@ if OS == 'darwin':
 elif OS == 'linux':
     DIR = '/home/herman/cpi/'
 
-# I think this whole block can be erased. The problem I have is explained by this SO post: https://stackoverflow.com/questions/28905725/tclerror-no-display-name-and-no-display-environment-variable-on-ec2
-# Display plots inline if on Mac, otherwise use settings friendlier to Saturn server.
-if OS == 'darwin':
-    import matplotlib.pyplot as plt
-    # For running IPython magic commands (e.g., %matplotlib)
-    from IPython import get_ipython
-    ipython = get_ipython()
-    ipython.magic("matplotlib") # enable interactive graphs.
-elif OS == 'linux':
-    # add message to explain that if matplotlib backend can't be set with use(), to edit the matplotlibrc file as per https://matplotlib.org/users/customizing.html#the-matplotlibrc-file
-    # Would be nice if I could catch matplotlib warning using matplotlib.warnings
-    import matplotlib
-    matplotlib.use('Agg')
-    import matplotlib.pyplot as plt
-else:
-    # Same message as for 'linux' case.
-    print('You are not running a supported Operating System.')
-    import matplotlib
-    matplotlib.use('Agg')
-    import matplotlib.pyplot as plt
-
 # Use latex in matplotlib
-# plt.rc('text', usetex=True)
+plt.rc('text', usetex=True) # False by default
 
 '''
 Notes
