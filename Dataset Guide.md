@@ -18,7 +18,7 @@ This document is just me putting my thoughts down to paper to better understand 
 
 ### <a name="ProteinDic"></a> 1. The protein Dictionary
 
-According to the Readme from STITCH (http://stitch1.embl.de/download/README), the protein dictionary can be found in another database, STRING. The file is `protein.aliases.v7.1.txt`. Its first two lines are[(1)](#note1):
+According to the Readme from STITCH (http://stitch1.embl.de/download/README), the protein dictionary can be found in another database, STRING. The file is `protein.aliases.v7.1.txt`. Its first two lines are[(1)](#noteFileLegibility):
 
 ```
 ##  species_ncbi_taxon_id ##  protein_id ## alias ##  source ##
