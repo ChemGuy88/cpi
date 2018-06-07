@@ -3,17 +3,18 @@ Notes on the Chemical-Protein Interaction Datasets
 
 **Note that the STRING site cited is version 7, and version 10 is available.**
 
-# Purpose
+## Purpose
 
 This document is just me putting my thoughts down to paper to better understand the datasets. I hope this helps someone else, too.
 
-# Contents
+## Contents
 
 1. [The Protein Dictionary](#ProteinDic)
 2. [The Species Dictionary](#SpeciesDic)
 3. [The Chemicals Dictionary](#ChemicalsDic)
+4. [Endnotes](#Endnotes)
 
-## 1. The protein Dictionary <a name="ProteinDic"></a>
+### <a name="ProteinDic"></a> 1. The protein Dictionary
 
 According to the Readme from STITCH (http://stitch1.embl.de/download/README), the protein dictionary can be found in another database, STRING. The file is `protein.aliases.v7.1.txt`. Its first two lines are[1](#note1):
 
@@ -43,7 +44,7 @@ For another CPI pair,
 
 `ENSDARP00000041069`... points to a DNA sequence on [Ensembl](http://useast.ensembl.org). This only points to a DNA sequence, but the search result yields "ENSDARG00000032319", which is associated with the protein "mest". `"ENSDARP00000041069"`, however, does return results for a DNA sequence that is associated with "mest". I do not understand why this protein tag does not link directly to its associated gene.
 
-## 2. The Species Dictionary <a name="SpeciesDic"></a>
+### <a name="SpeciesDic"></a>2. The Species Dictionary
 
 The species dictionary is located in file the `species.v7.1.txt`.
 
@@ -54,7 +55,7 @@ The first two lines are:
     117       core        Rhodopirellula baltica  Rhodopirellula baltica (strain 1)
 ```
 
-## 3. The Chemicals Dictionary <a name="ChemicalsDic"></a>
+### <a name="ChemicalsDic"></a>3. The Chemicals Dictionary
 
 The chemicals dictionary is in `chemicals.v1.10.tsv`. The first two lines are:
 
@@ -62,6 +63,6 @@ The chemicals dictionary is in `chemicals.v1.10.tsv`. The first two lines are:
 chemical      name                molecular_weight    SMILES_string
 CID000000001  acetyl-L-carnitine  203.236             CC(=O)OC(CC(=O)[O-])C[N+](C)(C)C
 ```
-# Endnotes <a name="Endnotes"></a>
+### <a name="Endnotes"></a>Endnotes
 
 1. <a name="noteFileLegibility"></a> The file is not spaced as shown. The file is tab-delimited. The spacing was added for better legibility.
