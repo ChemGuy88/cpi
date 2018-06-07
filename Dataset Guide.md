@@ -1,7 +1,9 @@
-Notes on the Chemical-Protein Interaction Datasets
+Guide to the Chemical-Protein Interaction Datasets
 ==================================================
 
-**Note that the STRING site cited is version 7, and version 10 is available.**
+## Note
+
+**The STRING site cited is version 7, and version 10 is available.**
 
 ## Purpose
 
@@ -12,11 +14,11 @@ This document is just me putting my thoughts down to paper to better understand 
 1. [The Protein Dictionary](#ProteinDic)
 2. [The Species Dictionary](#SpeciesDic)
 3. [The Chemicals Dictionary](#ChemicalsDic)
-4. [Endnotes](#Endnotes)
+4. [Comments](#Comments)
 
 ### <a name="ProteinDic"></a> 1. The protein Dictionary
 
-According to the Readme from STITCH (http://stitch1.embl.de/download/README), the protein dictionary can be found in another database, STRING. The file is `protein.aliases.v7.1.txt`. Its first two lines are\[[1]\](#note1):
+According to the Readme from STITCH (http://stitch1.embl.de/download/README), the protein dictionary can be found in another database, STRING. The file is `protein.aliases.v7.1.txt`. Its first two lines are[(1)](#note1):
 
 ```
 ##  species_ncbi_taxon_id ##  protein_id ## alias ##  source ##
@@ -63,6 +65,6 @@ The chemicals dictionary is in `chemicals.v1.10.tsv`. The first two lines are:
 chemical      name                molecular_weight    SMILES_string
 CID000000001  acetyl-L-carnitine  203.236             CC(=O)OC(CC(=O)[O-])C[N+](C)(C)C
 ```
-### <a name="Endnotes"></a>Endnotes
+### <a name="Comments"></a>Comments
 
 1. <a name="noteFileLegibility"></a> The file is not spaced as shown. The file is tab-delimited. The spacing was added for better legibility.
