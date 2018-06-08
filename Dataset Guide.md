@@ -70,13 +70,12 @@ CID000000001  acetyl-L-carnitine  203.236             CC(=O)OC(CC(=O)[O-])C[N+](
 ### 4. <a name="OtherFiles"></a>Other Files
 
 1. The protein-chemical links list, `protein_chemical.links.v1.0.tsv`:
-...```
+```
 chemical      protein                 combined_score
 CID011989247  9031.ENSGALP00000004303 268
 ```
-
 2. The link type list, `9606.actions.v5.0.tsv`. Note that this particular file name is prepended with `9606`, which denotes links for just one species, Humans. The complete dataset is massive, at around 60+ Gigabytes.
-...```
+```
 item_id_a             item_id_b             mode        action  a_is_acting score
 9606.ENSP00000170630  CIDm00010461          expression          f           150
 CIDm00010461          9606.ENSP00000170630  expression          t           150
