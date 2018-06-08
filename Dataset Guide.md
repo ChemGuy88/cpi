@@ -74,7 +74,23 @@ CID000000001  acetyl-L-carnitine  203.236             CC(=O)OC(CC(=O)[O-])C[N+](
 chemical      protein                 combined_score
 CID011989247  9031.ENSGALP00000004303 268
 ```
-2. The link type list, `9606.actions.v5.0.tsv`. Note that this particular file name is prepended with `9606`, which denotes links for just one species, Humans. The complete dataset is massive, at around 60+ Gigabytes.
+
+...The newer version for human links (`9606.protein_chemical.links.v5.0.tsv`), has the following preview:
+```chemical	protein	combined_score
+CIDm91758680	9606.ENSP00000257254	279
+CIDm91758680	9606.ENSP00000302120	154
+```
+
+...According to the [STITCH README](http://stitch.embl.de/download/README):
+... ...CIDs / CID0... - this is a stereo-specific compound, and the suffix is the
+PubChem compound id.
+... ...
+... ...CIDm / CID1... - this is a "flat" compound, i.e. with merged stereo-isomers
+The suffix (without the leading "1") is the PubChem compound id.
+... ...
+... ...(Note that the download files contain the prefixes CIDs/CIDm, while the API
+still returns CID0/CID1.)
+2. The link type list, `9606.actions.v5.0.tsv`. Note that this particular file name is prepended with `9606`, which denotes links for just one species, Humans. The complete dataset is massive, at around 60+ Gigabytes. Also note that this file contains bidirectional graph data. So each link is listed twice, for the forward and backward direction.
 ```
 item_id_a             item_id_b             mode        action  a_is_acting score
 9606.ENSP00000170630  CIDm00010461          expression          f           150
