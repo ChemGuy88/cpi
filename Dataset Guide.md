@@ -75,13 +75,13 @@ chemical      protein                 combined_score
 CID011989247  9031.ENSGALP00000004303 268
 ```
 
-   The newer version for human links (`9606.protein_chemical.links.v5.0.tsv`), has the following preview:
+      The newer version for human links (`9606.protein_chemical.links.v5.0.tsv`), has the following preview:
 ```chemical	protein	combined_score
 CIDm91758680	9606.ENSP00000257254	279
 CIDm91758680	9606.ENSP00000302120	154
 ```
 
-   According to the [STITCH README](http://stitch.embl.de/download/README):
+      According to the [STITCH README](http://stitch.embl.de/download/README):
 >CIDs / CID0... - this is a stereo-specific compound, and the suffix is the
 PubChem compound id.
 >
