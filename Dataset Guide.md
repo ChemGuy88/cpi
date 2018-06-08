@@ -14,7 +14,8 @@ This document is just me putting my thoughts down to paper to better understand 
 1. [The Protein Dictionary](#ProteinDic)
 2. [The Species Dictionary](#SpeciesDic)
 3. [The Chemicals Dictionary](#ChemicalsDic)
-4. [Comments](#Comments)
+4. [Other Files](#OtherFiles)
+5. [Comments](#Comments)
 
 ### <a name="ProteinDic"></a> 1. The protein Dictionary
 
@@ -65,6 +66,24 @@ The chemicals dictionary is in `chemicals.v1.10.tsv`. The first two lines are:
 chemical      name                molecular_weight    SMILES_string
 CID000000001  acetyl-L-carnitine  203.236             CC(=O)OC(CC(=O)[O-])C[N+](C)(C)C
 ```
-### <a name="Comments"></a>Comments
 
-1. <a name="noteFileLegibility"></a> The file is not spaced as shown. The file is tab-delimited. The spacing was added for better legibility.
+### 4. <a name="OtherFiles"></a>Other Files
+
+1. The protein-chemical links list, `protein_chemical.links.v1.0.tsv`:
+...```
+chemical      protein                 combined_score
+CID011989247  9031.ENSGALP00000004303 268
+```
+
+2. The link type list, `9606.actions.v5.0.tsv`. Note that this particular file name is prepended with `9606`, which denotes links for just one species, Humans. The complete dataset is massive, at around 60+ Gigabytes.
+...```
+item_id_a             item_id_b             mode        action  a_is_acting score
+9606.ENSP00000170630  CIDm00010461          expression          f           150
+CIDm00010461          9606.ENSP00000170630  expression          t           150
+9606.ENSP00000353915  CIDs23627457          binding             f           191
+CIDs23627457          9606.ENSP00000353915  binding             f           191
+```
+
+### 5. <a name="Comments"></a>Comments
+
+1. <a name="noteFileLegibility"></a> The file is not spaced as shown. The file is tab-delimited or space delimited. The spacing was added for better legibility.
