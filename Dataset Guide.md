@@ -69,7 +69,7 @@ CID000000001  acetyl-L-carnitine  203.236             CC(=O)OC(CC(=O)[O-])C[N+](
 
 ### 4. <a name="OtherFiles"></a>Other Files
 
-                                1. The protein-chemical links list, `protein_chemical.links.v1.0.tsv`:
+   1. The protein-chemical links list, `protein_chemical.links.v1.0.tsv`:
 
 ```
 chemical      protein                 combined_score
