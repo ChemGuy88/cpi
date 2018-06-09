@@ -45,6 +45,62 @@ Notes
 
 '''
 ################################################################################
+##### Load '9606.actions.v5.0.tsv' ##############################################
+################################################################################
+'''
+
+def loadActions(DIR, verbose=0, quickMode=False):
+    '''
+    Takes 2:40 (mm:ss) to load all 21 million human chemical-protein interactions from 9606.actions.v5.0.tsv
+
+    INPUT:  DIR, string, the directory where the STITCH datasets folder are located.
+            verbose, float. 0 -> no verbose output, any value greater than 0 will print progress feedback, including a progress bar.
+    OUTPUT: array, a Numpy array
+    '''
+    if verbose > 0:
+        print('\nOpening file')
+        Tic = tic()
+    fname = DIR + 'STITCH Data/9606.actions.v5.0.tsv'
+    f = open(fname)
+    lines = f.readlines()
+    headers = lines[0]
+    lines = lines[1:]
+    if verbose > 0:
+        Toc = toc(Tic)
+
+    if quickMode:
+        quickMode = 10
+    else:
+        quickMode = len(lines)
+    if verbose > 0:
+        print('\nSplitting lines')
+        Tic = tic()
+        bar = ChargingBar('Downloading CID information', max = len(lines))
+    rows = []
+    for line in lines[:quickMode]:
+        row = line.split('\t')
+        rows.append(row)
+        if verbose > 0:
+            bar.next()
+    if verbose > 0:
+        bar.finish()
+        Toc = toc(Tic)
+
+    if verbose > 0:
+        print('\nConverting to Numpy array')
+        Tic = tic()
+    array = np.array(rows)
+    if verbose > 0:
+        Toc = toc(Tic)
+
+    if verbose > 0:
+        print('\nDone')
+
+    return array.
+
+
+'''
+################################################################################
 ##### Create chemical-protein dictionary #######################################
 ################################################################################
 '''
@@ -126,7 +182,7 @@ def loadPickle(DIR, pickleName):
 ################################################################################
 '''
 
-def downloadCidSyns(cpiDic, alarm=alarm1, Troubleshooting=False):
+def downloadCidSyns(cpiDic, alarm=alarm1, quickMode=False):
     '''
     Download all synonyms for a given list of PubChem Compound ID (CID) numbers using PubChem's PUG REST utility. It takes less than 10 minutes to download all the synonyms for the STITCH CPI database on residential broadband.
 
@@ -144,11 +200,11 @@ def downloadCidSyns(cpiDic, alarm=alarm1, Troubleshooting=False):
     chunkSize = 190 # chunkSize is the number of length-9 CIDs (plus comma) that can fit into a URL, minus the approximately 100 other characters for the PUG request to PubChem servers.
     numChunks = np.ceil(len(cidList)/chunkSize)
 
-    # Troubleshooting; Shorten the list
-    if Troubleshooting:
+    # quickMode; Shorten the list
+    if quickMode:
         oldNumChunks = numChunks
         numChunks = int(np.ceil(numChunks * 0.05))
-        print('Troubleshooting\nReplaced old numChunks size (%d) with %d\n' % (oldNumChunks, numChunks))
+        print('quickMode\nReplaced old numChunks size (%d) with %d\n' % (oldNumChunks, numChunks))
 
     requestResults = []
 
@@ -285,6 +341,10 @@ def main():
 
     # Work sequence
     results = []
+    # quickMode is good for testing code by shortening loops. It's also good for troubleshooting. That's why I replaced Troubleshooting with quickMode, it's a more accurate description of the variable.
+    if '-quickMode' in args:
+        quickMode = True
+        # Add quickMode argument to each of the make() functions.
     if 'makeCpiDic' in args:
         try:
             cpiDic = makeCpiDic(DIR)
