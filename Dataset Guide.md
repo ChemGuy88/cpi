@@ -51,6 +51,17 @@ still returns CID0/CID1.)
 
 Fill me up, butter cup.
 
+### 2. The Chemical-Protein **Interactions** Dictionary, or lack thereof
+
+Te Chemical-Protein interaction list from my database (STITCH) has only 7 types of interactions (listed below). That means I won't need a dictionary for them. For example, when the neural net reads an abstract, the interaction term "binding" is just regular English, so it can use word embedding for it. None of the interaction terms seem to be technical terms. It's not like "acetaminophen", which needs to be translated (with a dictionary), to Tylenol or something else. The interaction terms extracted are a set of 7
+  1. `activation`
+  2. `binding`
+  3. `catalysis`
+  4. `expression`
+  5. `inhibition`
+  6. `reaction`
+  7. `pred_bind`
+
 ### <a name="ProteinDic"></a> 1. The Protein Dictionary
 
 A file or other object that links STITCH-format **protein** identifiers to any of its synonyms used in the literature.
