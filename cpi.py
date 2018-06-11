@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import json, os, pickle, re, requests, sys, traceback
+import datetime, json, os, pickle, re, requests, sys, traceback
 import matplotlib.pyplot as plt
 import numpy as np
 from bs4 import BeautifulSoup
@@ -20,11 +20,11 @@ Project Name:
 '''
 
 '''
-Meta-stuff
+Meta Global Variables
 '''
 
 ipython = get_ipython()
-ipython.magic("matplotlib") # Same as %matplotlib, turn on interactive plotting in IPython
+# ipython.magic("matplotlib") # Same as %matplotlib, turn on interactive plotting in IPython
 
 # Determine if running on Saturn server (Linux OS) or my personal machine (Darwin OS)
 OS = sys.platform
@@ -37,7 +37,7 @@ elif OS == 'linux':
     DIR = '/home/herman/cpi/'
 
 # Use latex in matplotlib
-plt.rc('text', usetex=True) # False by default
+# plt.rc('text', usetex=True) # False by default
 
 '''
 Notes
@@ -45,59 +45,76 @@ Notes
 
 '''
 ################################################################################
-##### Load '9606.actions.v5.0.tsv' ##############################################
+##### Load tab-delimited text file #############################################
 ################################################################################
 '''
 
-def loadActions(DIR, verbose=0, quickMode=False):
+def rowFromString(lists):
     '''
-    Takes 2:40 (mm:ss) to load all 21 million human chemical-protein interactions from 9606.actions.v5.0.tsv
+    ...
+    '''
+
+
+def loadFile(fileName, DIR, withHeaders=False, verbose=0, quickMode=False, quickModeLimit=10):
+    '''
+    Reads tab-delimited file and returns it as a list of lists. Scroll to bottom of Docstring for loading times.
 
     INPUT:  DIR, string, the directory where the STITCH datasets folder are located.
-            verbose, float. 0 -> no verbose output, any value greater than 0 will print progress feedback, including a progress bar.
+            verbose, float. 0 -> no verbose output, any value greater than 0 will print progress feedback, and including a progress bar (if not in quickMode)
     OUTPUT: array, a Numpy array
+
+    Loading times:
+    ============================================================================
+    9606.actions.v5.0.tsv
+    ---------------------
+        Takes 2:40 (mm:ss) to load all 21 million human chemical-protein interactions.
+    -------------------------
+    protein.aliases.v10.5.txt
+    -------------------------
+        Takes 30:00 (mm:ss) to load all 48 million protein aliases.
+    ============================================================================
     '''
     if verbose > 0:
         print('\nOpening file')
+        TicSum = datetime.timedelta(0,15,0)
         Tic = tic()
-    fname = DIR + 'STITCH Data/9606.actions.v5.0.tsv'
-    f = open(fname)
-    lines = f.readlines()
-    headers = lines[0]
-    lines = lines[1:]
+    fname = DIR + fileName
+    with open(fname) as f:
+        if quickMode:
+            # lines = [f.readline().splitlines()[0] for line in range(quickModeLimit)]
+            lines = (f.readline().splitlines()[0] for line in range(quickModeLimit))
+        else:
+            # lines = [f.readline().splitlines()[0] for line in f]
+            lines = (f.readline().splitlines()[0] for line in f)
+    # headers = lines[0]
+    # lines = lines[1:]
+    headers = next(lines)
     if verbose > 0:
         Toc = toc(Tic)
+        TicSum += Toc
 
-    if quickMode:
-        quickMode = 10
-    else:
-        quickMode = len(lines)
     if verbose > 0:
         print('\nSplitting lines')
         Tic = tic()
-        bar = ChargingBar('Downloading CID information', max = len(lines))
-    rows = []
-    for line in lines[:quickMode]:
+    if not quickMode and verbose:
+        bar = ChargingBar('', max = len(lines))
+    lists = []
+    for line in lines:
         row = line.split('\t')
-        rows.append(row)
-        if verbose > 0:
+        lists.append(row)
+        if not quickMode and verbose:
             bar.next()
-    if verbose > 0:
+    if not quickMode and verbose:
         bar.finish()
-        Toc = toc(Tic)
-
-    if verbose > 0:
-        print('\nConverting to Numpy array')
-        Tic = tic()
-    array = np.array(rows)
     if verbose > 0:
         Toc = toc(Tic)
+        TicSum += Toc
+        print('\nDone\nTotal elapsed time was %s (h:mm:ss)' % str(TicSum))
 
-    if verbose > 0:
-        print('\nDone')
-
-    return array.
-
+    if withHeaders:
+        return [[headers]]+lists
+    else:
+        return lists
 
 '''
 ################################################################################
@@ -289,27 +306,30 @@ def makeCidSynsDic(DIR, cpiDic):
 ################################################################################
 '''
 
-
+###
 
 '''
 ################################################################################
-##### Troubleshooting ##########################################################
+##### Workspace ################################################################
 ################################################################################
 '''
 
 '''
 from importlib import reload
-
-from cpi import DIR, loadPickle
-cpiDic = loadPickle(DIR, 'cpiDic')
+from cpi import DIR, loadFile
 
 try:
     reload(cpi)
 except NameError:
     import cpi
-from cpi import downloadCidSyns
-requestResults = downloadCidSyns(cpiDic)
+from cpi import loadFile
 
+actionsfn = 'STITCH Data/9606.actions.v5.0.tsv'
+protsynsfn = 'STITCH Data/protein.aliases.v10.5.txt'
+actions = loadFile(actionsfn, DIR, withHeaders=True, verbose=1, quickMode=1)
+protsyns = loadFile(protsynsfn, DIR, withHeaders=True, verbose=1, quickMode=1)
+# actions = loadFile(actionsfn, DIR, withHeaders=False, verbose=1, quickMode=0)
+# protsyns = loadFile(protsynsfn, DIR, withHeaders=False, verbose=1, quickMode=0)
 '''
 
 '''
