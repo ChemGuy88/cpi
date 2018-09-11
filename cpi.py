@@ -396,23 +396,69 @@ def makeProtSynsDic(DIR, verbose=0, quickMode=False):
 
 if False:
     from importlib import reload
-    from cpi import DIR, loadFile
 
     try:
         reload(cpi)
     except NameError:
         import cpi
-    from cpi import loadFile
+    from cpi import *
 
-    actionsfn = 'STITCH Data/9606.actions.v5.0.tsv'
+if True:
+    loaded = '414'
+    TicSum = 0
+
     protsynsfn = 'STITCH Data/protein.aliases.v10.5.txt'
+    protsyns = loadFile(protsynsfn, DIR, withHeaders=False, verbose=verbose, quickMode=quickMode, quickModeLimit = 6448828)
+    # v10.5.txt has 48,366,210 lines that are read in 1h 15m.
+    # We can use quickMode to read 644,882 lines in 10m.
 
-    # actions = loadFile(actionsfn, DIR, withHeaders=True, verbose=1, quickMode=1)
-    # protsyns = loadFile(protsynsfn, DIR, withHeaders=True, verbose=1, quickMode=1)
-    # actions = loadFile(actionsfn, DIR, withHeaders=False, verbose=1, quickMode=0)
-    protsyns = loadFile(protsynsfn, DIR, withHeaders=False, verbose=1, quickMode=0)
+    # create set of protein names
+    if verbose > 0:
+        print('Creating set of protein names')
+        Tic = tic()
+    prots = []
+    for row in protsyns:
+        name = row[0]
+        if name not in prots:
+            prots.append(name)
+    if verbose > 0:
+        Toc = toc(Tic)
+        TicSum += Toc
 
-    # Check to see if each protein mentioned in 9606.actions.v5.0.tsv is in protSynsDic.
+    # save protein names
+    f = open(DIR+'protNames.txt','w')
+    for name in prots:
+        f.write(name+'\n')
+    f.close()
+    # v10.5.txt should have 9,507,839 proteins
+    # This takes 1 minute to do
+
+    # Create dictionary of protein name aliases
+    if verbose > 0:
+        print('Creating dictionary of protein name aliases')
+        Tic = tic()
+    if not quickMode and verbose:
+        count = len(protsyns)
+        bar = ChargingBar('', max = count)
+    protSynsDic = {}
+    for prot in prots:
+        protSynsDic[prot] = []
+    for line in protsyns:
+        row = protsyns.pop(0)
+        name, alias, source = row[0], row[1], row[2] # row format is : name alias source
+        for prot in prots:
+            if prot in name:
+                protSynsDic[prot].append((alias, source))
+        if not quickMode and verbose:
+            bar.next()
+    if not quickMode and verbose:
+        bar.finish()
+    if verbose > 0:
+        Toc = toc(Tic)
+        TicSum += Toc
+        print('\nDone\nTotal elapsed time was %s (h:mm:ss)' % str(TicSum))
+    if not quickMode and verbose:
+        beep()
 
 '''
 ################################################################################
