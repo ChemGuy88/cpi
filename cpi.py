@@ -62,7 +62,9 @@ def loadFile(fileName, DIR, withHeaders=False, verbose=0, quickMode=False, quick
     Reads tab-delimited file and returns it as a list of lists. Scroll to bottom of Docstring for loading times.
 
     INPUT:  DIR, string, the directory where the STITCH datasets folder are located.
-            verbose, float. 0 -> no verbose output, any value greater than 0 will print progress feedback, and including a progress bar (if not in quickMode)
+            verbose, interger. 0 -> no verbose output, any value greater than 0 will print progress feedback, and including a progress bar (if not in quickMode)
+            quickMode, boolean. If true, will run a shorter number of iterations as determined by \'quickModeLimit\'.
+            quickModeLimit, interger. The number of lines from the file to read. Default 10.
     OUTPUT: array, a Numpy array
 
     Loading times:
@@ -84,15 +86,20 @@ def loadFile(fileName, DIR, withHeaders=False, verbose=0, quickMode=False, quick
     '''
     if verbose > 0:
         print('\nOpening file')
-        TicSum = datetime.timedelta(0,15,0)
+        TicSum = datetime.timedelta(0,0,0)
         Tic = tic()
     fname = DIR + fileName
-    # This block gives counts that lead to innacurate chargeBar lengths (twice as long for protsyns)
+
+    # Get progress bar length
     if not quickMode and verbose:
         with open(fname) as f:
             lines0 = (f.readline().splitlines()[0] for line in f)
             count = sum(1 for line in lines0)
+
+    # Main block
     with open(fname) as f:
+
+        # Read file
         if quickMode:
             lines = (f.readline().splitlines()[0] for line in range(quickModeLimit))
         else:
@@ -312,23 +319,18 @@ def makeCidSynsDic(DIR, cpiDic):
 
     return cidSynsDic
 
-'''
-################################################################################
-##### Create Protein Dictionary ################################################
-################################################################################
-'''
-
 def makeProtSynsDic(DIR, verbose=0, quickMode=False):
     '''
         Docstring
 
-    Takes about 47 minutes on \'protein.aliases.v10.5.txt\'
+    Takes about 47 to 75 minutes on \'protein.aliases.v10.5.txt\'
     '''
     TicSum = 0
 
     protsynsfn = 'STITCH Data/protein.aliases.v10.5.txt'
-    protsyns = loadFile(protsynsfn, DIR, withHeaders=False, verbose=verbose, quickMode=quickMode) # 1.25 hours
-    # len 48,366,210
+    protsyns = loadFile(protsynsfn, DIR, withHeaders=False, verbose=verbose, quickMode=quickMode, quickModeLimit = 6448828)
+    # v10.5.txt has 48,366,210 lines that are read in 1h 15m.
+    # We can use quickMode to read 644,882 lines in 10m.
 
     # create set of protein names
     if verbose > 0:
@@ -336,11 +338,20 @@ def makeProtSynsDic(DIR, verbose=0, quickMode=False):
         Tic = tic()
     prots = []
     for row in protsyns:
-        prots.append(row[0])
-    prots = list(set(prots)) # len 9,507,839
+        name = row[0]
+        if name not in prots:
+            prots.append(name)
     if verbose > 0:
-        Toc = toc(Tic) # 1 minute
+        Toc = toc(Tic)
         TicSum += Toc
+
+    # save protein names
+    f = open(DIR+'protNames.txt','w')
+    for name in prots:
+        f.write(name+'\n')
+    f.close()
+    # v10.5.txt should have 9,507,839 proteins
+    # This takes 1 minute to do
 
     # Create dictionary of protein name aliases
     if verbose > 0:
@@ -352,9 +363,8 @@ def makeProtSynsDic(DIR, verbose=0, quickMode=False):
     protSynsDic = {}
     for prot in prots:
         protSynsDic[prot] = []
-    protsyns2 = protsyns[:] # copy list
-    for line in protsyns2:
-        row = protsyns2.pop(0)
+    for line in protsyns:
+        row = protsyns.pop(0)
         name, alias, source = row[0], row[1], row[2] # row format is : name alias source
         for prot in prots:
             if prot in name:
