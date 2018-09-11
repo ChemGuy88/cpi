@@ -53,7 +53,7 @@ Fill me up, butter cup.
 
 ### 2. The Chemical-Protein **Interactions** Dictionary, or lack thereof
 
-Te Chemical-Protein interaction list from my database (STITCH) has only 7 types of interactions (listed below). That means I won't need a dictionary for them. For example, when the neural net reads an abstract, the interaction term "binding" is just regular English, so it can use word embedding for it. None of the interaction terms seem to be technical terms. It's not like "acetaminophen", which needs to be translated (with a dictionary), to Tylenol or something else. The interaction terms extracted are a set of 7
+The Chemical-Protein interaction list from my database (STITCH) has only 7 types of interactions (listed below). That means I won't need a dictionary for them. For example, when the neural net reads an abstract, the interaction term "binding" is just regular English, so it can use word embedding for it. None of the interaction terms seem to be technical terms. It's not like "acetaminophen", which needs to be translated (with a dictionary), to Tylenol or something else. The interaction terms extracted are a set of 7
   1. `activation`
   2. `binding`
   3. `catalysis`
@@ -64,7 +64,7 @@ Te Chemical-Protein interaction list from my database (STITCH) has only 7 types 
 
 ### <a name="ProteinDic"></a> 1. The Protein Dictionary
 
-A file or other object that links STITCH-format **protein** identifiers to any of its synonyms used in the literature.
+The `protein.aliases.v[...].txt` files seem to be protein dictionaries. They have the generic name on the leftmost column, the alias in the seonc column, and the source of that alias in the third column. `[...]` is the file version number. Currently I'm using version `10.5`.
 
 ### <a name="SpeciesDic"></a>2. The Species Dictionary
 
@@ -72,7 +72,7 @@ A file or other object that links STITCH-format **species** identifiers to any o
 
 ### <a name="ChemicalsDic"></a>3. The Chemicals Dictionary
 
-A file or other object that links STITCH-format **chemicals** identifiers to any of its synonyms used in the literature.
+A file or other object that links STITCH-format **chemicals** identifiers to any of its synonyms used in the literature. I have made my own using the NIH's PUG REST service.
 
 ### 4. <a name="OtherFiles"></a>Other Files
 
