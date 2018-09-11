@@ -17,6 +17,8 @@ Project Name:
     It is recommended to run this in the command line thus:
 
     $ ipython3 -i -m cpi
+
+    https://stackoverflow.com/questions/36414966/fastest-approach-to-read-a-big-ascii-file-into-a-numpy-array
 '''
 
 '''
@@ -53,7 +55,7 @@ def rowFromString(lists):
     '''
     ...
     '''
-
+    pass
 
 def loadFile(fileName, DIR, withHeaders=False, verbose=0, quickMode=False, quickModeLimit=10):
     '''
@@ -67,50 +69,60 @@ def loadFile(fileName, DIR, withHeaders=False, verbose=0, quickMode=False, quick
     ============================================================================
     9606.actions.v5.0.tsv
     ---------------------
-        Takes 2:40 (mm:ss) to load all 21 million human chemical-protein interactions.
+        Takes 16:20 (mm:ss) to load all 22 million human chemical-protein interactions.
     -------------------------
     protein.aliases.v10.5.txt
     -------------------------
-        Takes 30:00 (mm:ss) to load all 48 million protein aliases.
+        Takes 48:21 (mm:ss) to load all 48 million protein aliases.
     ============================================================================
+
+    >>> import psutils
+    >>> mem = psutils.virtual_memory()
+    >>> THRESHOLD = 100 * 1024 * 1024  # 100MB
+    >>> if mem.available <= THRESHOLD:
+    ...     print("warning")
     '''
     if verbose > 0:
         print('\nOpening file')
         TicSum = datetime.timedelta(0,15,0)
         Tic = tic()
     fname = DIR + fileName
+    # This block gives counts that lead to innacurate chargeBar lengths (twice as long for protsyns)
+    if not quickMode and verbose:
+        with open(fname) as f:
+            lines0 = (f.readline().splitlines()[0] for line in f)
+            count = sum(1 for line in lines0)
     with open(fname) as f:
         if quickMode:
-            # lines = [f.readline().splitlines()[0] for line in range(quickModeLimit)]
             lines = (f.readline().splitlines()[0] for line in range(quickModeLimit))
         else:
-            # lines = [f.readline().splitlines()[0] for line in f]
             lines = (f.readline().splitlines()[0] for line in f)
-    # headers = lines[0]
-    # lines = lines[1:]
-    headers = next(lines)
-    if verbose > 0:
-        Toc = toc(Tic)
-        TicSum += Toc
+        headers = next(lines)
+        if verbose > 0:
+            Toc = toc(Tic)
+            TicSum += Toc
 
-    if verbose > 0:
-        print('\nSplitting lines')
-        Tic = tic()
-    if not quickMode and verbose:
-        bar = ChargingBar('', max = len(lines))
-    lists = []
-    for line in lines:
-        row = line.split('\t')
-        lists.append(row)
+        # Split lines
+        if verbose > 0:
+            print('\nSplitting lines')
+            Tic = tic()
         if not quickMode and verbose:
-            bar.next()
-    if not quickMode and verbose:
-        bar.finish()
-    if verbose > 0:
-        Toc = toc(Tic)
-        TicSum += Toc
-        print('\nDone\nTotal elapsed time was %s (h:mm:ss)' % str(TicSum))
+            bar = ChargingBar('', max = count)
+        lists = []
+        for line in lines:
+            row = line.split('\t')
+            lists.append(row)
+            if not quickMode and verbose:
+                bar.next()
+        if not quickMode and verbose:
+            bar.finish()
+        if verbose > 0:
+            Toc = toc(Tic)
+            TicSum += Toc
+            print('\nDone\nTotal elapsed time was %s (h:mm:ss)' % str(TicSum))
 
+    if not quickMode and verbose:
+        beep()
     if withHeaders:
         return [[headers]]+lists
     else:
@@ -118,7 +130,7 @@ def loadFile(fileName, DIR, withHeaders=False, verbose=0, quickMode=False, quick
 
 '''
 ################################################################################
-##### Create chemical-protein dictionary #######################################
+##### Create chemical-protein interactions dictionary ##########################
 ################################################################################
 '''
 
@@ -270,7 +282,7 @@ def makeCidSynsDic(DIR, cpiDic):
     '''
     Creates a dictionary of CID (compound ID) synonyms. Synonyms are acquired by
     using the PUG REST utility from PubChem (NIH). Requires internet connection.
-    THe dictionary is in the format
+    The dictionary is in the format
         STITCH_ID : [synonym1, synonym2, ... ]
 
     INPUT:  DIR, string, the directory to read from and to.
@@ -306,7 +318,65 @@ def makeCidSynsDic(DIR, cpiDic):
 ################################################################################
 '''
 
-###
+def makeProtSynsDic(DIR, verbose=0, quickMode=False):
+    '''
+        Docstring
+
+    Takes about 47 minutes on \'protein.aliases.v10.5.txt\'
+    '''
+    TicSum = 0
+
+    protsynsfn = 'STITCH Data/protein.aliases.v10.5.txt'
+    protsyns = loadFile(protsynsfn, DIR, withHeaders=False, verbose=verbose, quickMode=quickMode) # 1.25 hours
+    # len 48,366,210
+
+    # create set of protein names
+    if verbose > 0:
+        print('Creating set of protein names')
+        Tic = tic()
+    prots = []
+    for row in protsyns:
+        prots.append(row[0])
+    prots = list(set(prots)) # len 9,507,839
+    if verbose > 0:
+        Toc = toc(Tic) # 1 minute
+        TicSum += Toc
+
+    # Create dictionary of protein name aliases
+    if verbose > 0:
+        print('Creating dictionary of protein name aliases')
+        Tic = tic()
+    if not quickMode and verbose:
+        count = len(protsyns)
+        bar = ChargingBar('', max = count)
+    protSynsDic = {}
+    for prot in prots:
+        protSynsDic[prot] = []
+    protsyns2 = protsyns[:] # copy list
+    for line in protsyns2:
+        row = protsyns2.pop(0)
+        name, alias, source = row[0], row[1], row[2] # row format is : name alias source
+        for prot in prots:
+            if prot in name:
+                protSynsDic[prot].append((alias, source))
+        if not quickMode and verbose:
+            bar.next()
+    if not quickMode and verbose:
+        bar.finish()
+    if verbose > 0:
+        Toc = toc(Tic)
+        TicSum += Toc
+        print('\nDone\nTotal elapsed time was %s (h:mm:ss)' % str(TicSum))
+    if not quickMode and verbose:
+        beep()
+
+    # Pickle Dictionary
+    pname = DIR + 'protSynsDic.pickle'
+    with open(pname, 'wb') as handle:
+        pickle.dump(protsyns, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+    # return
+    return protSynsDic
 
 '''
 ################################################################################
@@ -314,23 +384,25 @@ def makeCidSynsDic(DIR, cpiDic):
 ################################################################################
 '''
 
-'''
-from importlib import reload
-from cpi import DIR, loadFile
+if False:
+    from importlib import reload
+    from cpi import DIR, loadFile
 
-try:
-    reload(cpi)
-except NameError:
-    import cpi
-from cpi import loadFile
+    try:
+        reload(cpi)
+    except NameError:
+        import cpi
+    from cpi import loadFile
 
-actionsfn = 'STITCH Data/9606.actions.v5.0.tsv'
-protsynsfn = 'STITCH Data/protein.aliases.v10.5.txt'
-actions = loadFile(actionsfn, DIR, withHeaders=True, verbose=1, quickMode=1)
-protsyns = loadFile(protsynsfn, DIR, withHeaders=True, verbose=1, quickMode=1)
-# actions = loadFile(actionsfn, DIR, withHeaders=False, verbose=1, quickMode=0)
-# protsyns = loadFile(protsynsfn, DIR, withHeaders=False, verbose=1, quickMode=0)
-'''
+    actionsfn = 'STITCH Data/9606.actions.v5.0.tsv'
+    protsynsfn = 'STITCH Data/protein.aliases.v10.5.txt'
+
+    # actions = loadFile(actionsfn, DIR, withHeaders=True, verbose=1, quickMode=1)
+    # protsyns = loadFile(protsynsfn, DIR, withHeaders=True, verbose=1, quickMode=1)
+    # actions = loadFile(actionsfn, DIR, withHeaders=False, verbose=1, quickMode=0)
+    protsyns = loadFile(protsynsfn, DIR, withHeaders=False, verbose=1, quickMode=0)
+
+    # Check to see if each protein mentioned in 9606.actions.v5.0.tsv is in protSynsDic.
 
 '''
 ################################################################################
