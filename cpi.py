@@ -325,7 +325,7 @@ def makeProtSynsDic(DIR, verbose=0, quickMode=False):
 
     Takes about 47 to 75 minutes on \'protein.aliases.v10.5.txt\'
     '''
-    TicSum = 0
+    TicSum = datetime.timedelta(0,0,0)
 
     protsynsfn = 'STITCH Data/protein.aliases.v10.5.txt'
     protsyns = loadFile(protsynsfn, DIR, withHeaders=False, verbose=verbose, quickMode=quickMode, quickModeLimit = 6448828)
@@ -406,7 +406,7 @@ if False:
 if True:
     verbose = True
     quickMode = True
-    TicSum = 0
+    TicSum = datetime.timedelta(0,0,0)
 
     print('\nRunning prototype for \'makeProtSynsDic\' function.')
 
@@ -418,8 +418,9 @@ if True:
     # create set of protein names
     if verbose > 0:
         text = '\nCreating set of protein names'
+        print(text)
         count = len(protsyns)
-        bar = ChargingBar(text, max = count)
+        bar = ChargingBar('', max = count)
         Tic = tic()
     prots = []
     for row in protsyns:
@@ -434,6 +435,7 @@ if True:
         TicSum += Toc
 
     # save protein names
+    print('\nSaving protein names to text file in %s' % DIR)
     f = open(DIR+'protNames.txt','w')
     for name in prots:
         f.write(name+'\n')
@@ -443,24 +445,25 @@ if True:
 
     # Create dictionary of protein name aliases
     if verbose > 0:
-        print('Creating dictionary of protein name aliases')
+        print('\nCreating dictionary of protein name aliases')
         count = len(protsyns)
-        bar = ChargingBar('', max = count)
+        bar = ChargingBar('', max = 2*count)
         Tic = tic()
     protSynsDic = {}
     for prot in prots:
         protSynsDic[prot] = []
+        if verbose > 0:
+            bar.next()
     for line in protsyns:
         row = protsyns.pop(0)
         name, alias, source = row[0], row[1], row[2] # row format is : name alias source
         for prot in prots:
             if prot in name:
                 protSynsDic[prot].append((alias, source))
-        if not quickMode and verbose:
+        if verbose > 0:
             bar.next()
-    if not quickMode and verbose:
-        bar.finish()
     if verbose > 0:
+        bar.finish()
         Toc = toc(Tic)
         TicSum += Toc
         print('\nDone creating protein synonyms dictionary.\nTotal elapsed time was %s (h:mm:ss)' % str(TicSum))
