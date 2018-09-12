@@ -85,7 +85,7 @@ def loadFile(fileName, DIR, withHeaders=False, verbose=0, quickMode=False, quick
     ...     print("warning")
     '''
     if verbose > 0:
-        print('\nOpening file')
+        print('\nRunning \'loadFile\' function.')
         TicSum = datetime.timedelta(0,0,0)
         Tic = tic()
     fname = DIR + fileName
@@ -126,7 +126,7 @@ def loadFile(fileName, DIR, withHeaders=False, verbose=0, quickMode=False, quick
         if verbose > 0:
             Toc = toc(Tic)
             TicSum += Toc
-            print('\nDone\nTotal elapsed time was %s (h:mm:ss)' % str(TicSum))
+            print('\nDone running \'loadFile\' function.\nTotal elapsed time was %s (h:mm:ss)' % str(TicSum))
 
     if not quickMode and verbose:
         beep()
@@ -404,24 +404,32 @@ if False:
     from cpi import *
 
 if True:
-    loaded = '414'
+    verbose = True
+    quickMode = True
     TicSum = 0
 
+    print('\nRunning prototype for \'makeProtSynsDic\' function.')
+
     protsynsfn = 'STITCH Data/protein.aliases.v10.5.txt'
-    protsyns = loadFile(protsynsfn, DIR, withHeaders=False, verbose=verbose, quickMode=quickMode, quickModeLimit = 6448828)
+    protsyns = loadFile(protsynsfn, DIR, withHeaders=False, verbose=verbose, quickMode=quickMode, quickModeLimit = 64488)
     # v10.5.txt has 48,366,210 lines that are read in 1h 15m.
-    # We can use quickMode to read 644,882 lines in 10m.
+    # We can use quickMode to read 644,882 lines in 10s.
 
     # create set of protein names
     if verbose > 0:
-        print('Creating set of protein names')
+        text = '\nCreating set of protein names'
+        count = len(protsyns)
+        bar = ChargingBar(text, max = count)
         Tic = tic()
     prots = []
     for row in protsyns:
         name = row[0]
         if name not in prots:
             prots.append(name)
+        if verbose > 0:
+            bar.next()
     if verbose > 0:
+        bar.finish()
         Toc = toc(Tic)
         TicSum += Toc
 
@@ -436,10 +444,9 @@ if True:
     # Create dictionary of protein name aliases
     if verbose > 0:
         print('Creating dictionary of protein name aliases')
-        Tic = tic()
-    if not quickMode and verbose:
         count = len(protsyns)
         bar = ChargingBar('', max = count)
+        Tic = tic()
     protSynsDic = {}
     for prot in prots:
         protSynsDic[prot] = []
@@ -456,7 +463,7 @@ if True:
     if verbose > 0:
         Toc = toc(Tic)
         TicSum += Toc
-        print('\nDone\nTotal elapsed time was %s (h:mm:ss)' % str(TicSum))
+        print('\nDone creating protein synonyms dictionary.\nTotal elapsed time was %s (h:mm:ss)' % str(TicSum))
     if not quickMode and verbose:
         beep()
 
