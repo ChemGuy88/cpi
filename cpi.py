@@ -47,15 +47,9 @@ Notes
 
 '''
 ################################################################################
-##### Load tab-delimited text file #############################################
+##### Functions ################################################################
 ################################################################################
 '''
-
-def rowFromString(lists):
-    '''
-    ...
-    '''
-    pass
 
 def loadFile(fileName, DIR, withHeaders=False, verbose=0, quickMode=False, quickModeLimit=10):
     '''
@@ -135,12 +129,6 @@ def loadFile(fileName, DIR, withHeaders=False, verbose=0, quickMode=False, quick
     else:
         return lists
 
-'''
-################################################################################
-##### Create chemical-protein interactions dictionary ##########################
-################################################################################
-'''
-
 def makeCpiDic(DIR):
     '''
     Creates and pickles a dictionary of Chemical-Protein Interactions
@@ -192,12 +180,6 @@ def makeCpiDic(DIR):
 
     return cpiDic
 
-'''
-################################################################################
-##### Load pickled dictionary ##################################################
-################################################################################
-'''
-
 def loadPickle(DIR, pickleName):
     '''
     Loads a pickled object
@@ -211,12 +193,6 @@ def loadPickle(DIR, pickleName):
     with open(pname, 'rb') as handle:
         pickleObj = pickle.load(handle)
     return pickleObj
-
-'''
-################################################################################
-##### Create synonyms dictionary ###############################################
-################################################################################
-'''
 
 def downloadCidSyns(cpiDic, alarm=alarm1, quickMode=False):
     '''
@@ -417,7 +393,7 @@ if True:
 
     # create set of protein names
     if verbose > 0:
-        text = '\nCreating set of protein names'
+        text = '\nCreating set of protein names.'
         print(text)
         count = len(protsyns)
         bar = ChargingBar('', max = count)
@@ -443,17 +419,28 @@ if True:
     # v10.5.txt should have 9,507,839 proteins
     # This takes 1 minute to do
 
-    # Create dictionary of protein name aliases
+    # Prime dictionary of protein name aliases
     if verbose > 0:
-        print('\nCreating dictionary of protein name aliases')
-        count = len(protsyns)
-        bar = ChargingBar('', max = 2*count)
+        print('\nPriming dictionary of protein name aliases.')
+        count = len(prots)
+        bar = ChargingBar('', max = count)
         Tic = tic()
     protSynsDic = {}
     for prot in prots:
         protSynsDic[prot] = []
         if verbose > 0:
             bar.next()
+    if verbose > 0:
+        Toc = toc(Tic)
+        TicSum += Toc
+        bar.finish()
+
+    # Populate dictionary
+    if verbose > 0:
+        print('\nPopulating dictionary with protein name aliases.')
+        count = len(prots)
+        bar = ChargingBar('', max = count)
+        Tic = tic()
     for line in protsyns:
         row = protsyns.pop(0)
         name, alias, source = row[0], row[1], row[2] # row format is : name alias source
@@ -466,9 +453,14 @@ if True:
         bar.finish()
         Toc = toc(Tic)
         TicSum += Toc
-        print('\nDone creating protein synonyms dictionary.\nTotal elapsed time was %s (h:mm:ss)' % str(TicSum))
+
+    # Verbose exit
+    if verbose > 0:
+        print('\nDone running prototype for \'makeProtSynsDic\' function.\nTotal elapsed time was %s (h:mm:ss)' % str(TicSum))
     if not quickMode and verbose:
         beep()
+
+    # 20s for 65,000 lines of aliases.
 
 '''
 ################################################################################
