@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from bs4 import BeautifulSoup
 from IPython import get_ipython
-from mlFunctions import tic, toc, beep, alarm1, run_from_ipython
+from mlFunctions import tic, toc, beep, ts, alarm1, run_from_ipython
 from progress.bar import ChargingBar
 
 '''
@@ -132,7 +132,7 @@ def loadFile(fileName, DIR, withHeaders=False, verbose=0, quickMode=False, quick
             Toc = toc(Tic)
             TicSum += Toc
             timeStamp = ts()
-            print('\n[%s] Done running \'loadFile\' function.\nTotal elapsed time was %s (h:mm:ss)' % str(timeStamp), str(TicSum))
+            print('\n[%s] Done running \'loadFile\' function.\nTotal elapsed time was %s (h:mm:ss)' % (str(timeStamp), str(TicSum)))
 
     if not quickMode and verbose:
         beep()
@@ -307,74 +307,128 @@ def makeCidSynsDic(DIR, cpiDic):
 
     return cidSynsDic
 
-def makeProtSynsDic(DIR, verbose=0, quickMode=False):
+def makeProtSynsDic(DIR, protsynsfn='STITCH Data/9606.protein.aliases.v10.5.txt', verbose=0, quickMode=False, quickModeLimit=250000):
     '''
-        Docstring
-
-    Takes about 47 to 75 minutes on \'protein.aliases.v10.5.txt\'
+    Docstring
     '''
     TicSum = datetime.timedelta(0,0,0)
 
-    protsynsfn = 'STITCH Data/protein.aliases.v10.5.txt'
-    protsyns = loadFile(protsynsfn, DIR, withHeaders=False, verbose=verbose, quickMode=quickMode, quickModeLimit = 6448828)
-    # v10.5.txt has 48,366,210 lines that are read in 1h 15m.
-    # We can use quickMode to read 644,882 lines in 10m.
+    timeStamp = ts()
+    print('\n[%s] Running prototype for \'makeProtSynsDic\' function.' % str(timeStamp))
 
-    # create set of protein names
+    protsyns = loadFile(protsynsfn, DIR, withHeaders=False, verbose=verbose, quickMode=quickMode, quickModeLimit = quickModeLimit)
+    # v10.5.txt has 48,366,210 lines that are read in 1h 15m.
+
+    # create set of protein names and aliases
     if verbose > 0:
-        print('Creating set of protein names')
+        timeStamp = ts()
+        text = '\n[%s] Creating sets of protein names and aliases.' % str(timeStamp)
+        print(text)
+        count = len(protsyns)
+        bar = ChargingBar('', max = count)
         Tic = tic()
     prots = []
+    aliases = []
     for row in protsyns:
-        name = row[0]
-        if name not in prots:
-            prots.append(name)
+        name, alias = row[0], row[1]
+        prots.append(name)
+        aliases.append(alias)
+        if verbose > 0:
+            bar.next()
+    prots = set(prots)
+    aliases = set(aliases)
     if verbose > 0:
+        bar.finish()
         Toc = toc(Tic)
         TicSum += Toc
 
     # save protein names
+    '''
+    timeStamp = ts()
+    print('\n[%s] Saving protein names to text file in %s' % (str(timeStamp), DIR))
     f = open(DIR+'protNames.txt','w')
     for name in prots:
         f.write(name+'\n')
     f.close()
+    '''
     # v10.5.txt should have 9,507,839 proteins
-    # This takes 1 minute to do
 
-    # Create dictionary of protein name aliases
+    # Prime dictionary of protein name aliases
     if verbose > 0:
-        print('Creating dictionary of protein name aliases')
-        Tic = tic()
-    if not quickMode and verbose:
-        count = len(protsyns)
+        timeStamp = ts()
+        print('\n[%s] Priming protein synonyms dictionary.' % str(timeStamp))
+        count = len(prots)
         bar = ChargingBar('', max = count)
+        Tic = tic()
     protSynsDic = {}
     for prot in prots:
         protSynsDic[prot] = []
-    for line in protsyns:
-        row = protsyns.pop(0)
-        name, alias, source = row[0], row[1], row[2] # row format is : name alias source
-        for prot in prots:
-            if prot in name:
-                protSynsDic[prot].append((alias, source))
-        if not quickMode and verbose:
+        if verbose > 0:
             bar.next()
-    if not quickMode and verbose:
-        bar.finish()
     if verbose > 0:
+        print('')
         Toc = toc(Tic)
         TicSum += Toc
-        print('\nDone\nTotal elapsed time was %s (h:mm:ss)' % str(TicSum))
+        bar.finish()
+
+    # Priming reverse look-up dictionary
+    if verbose > 0:
+        timeStamp = ts()
+        print('\n[%s] Priming protein synonym reverse look-up dictionary.' % str(timeStamp))
+        count = len(aliases)
+        bar = ChargingBar('', max = count)
+        Tic = tic()
+    protSynsRDic = {}
+    for alias in aliases:
+        protSynsRDic[alias] = []
+        bar.next()
+    if verbose > 0:
+        print('')
+        Toc = toc(Tic)
+        TicSum += Toc
+        bar.finish()
+
+    # Populate dictionaries
+    # this takes the most time. For all proteins, it takes 1 hour per percentage point.
+    if verbose > 0:
+        timeStamp = ts()
+        print('\n[%s] Populating protein synonym and alias dictionaries.' % str(timeStamp))
+        count = len(protsyns)
+        bar = ChargingBar('', max = count)
+        Tic = tic()
+    for line in protsyns:
+        name, alias, source = line[0], line[1], line[2] # line format is : name alias source
+        protSynsDic[name].append((alias, source))
+        protSynsRDic[alias].append((name, source))
+        if verbose > 0:
+            bar.next()
+    if verbose > 0:
+        bar.finish()
+        Toc = toc(Tic)
+        TicSum += Toc
+
+    # Pickle dictionaries
+    if verbose > 0:
+        timeStamp = ts()
+        print('\n[%s] Pickling dictionaries.' % str(timeStamp))
+        Tic = tic()
+    pname = DIR + 'protSynsDic.pickle'
+    with open(pname, 'wb') as handle:
+        pickle.dump(protSynsDic, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    pname = DIR + 'protSynsRDic.pickle'
+    with open(pname, 'wb') as handle:
+        pickle.dump(protSynsRDic, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    Toc = toc(Tic)
+    TicSum += Toc
+
+    # Verbose exit
+    if verbose > 0:
+        timeStamp = ts()
+        print('\n[%s] Done running prototype for \'makeProtSynsDic\' function.\nTotal elapsed time was %s (h:mm:ss)' % (str(timeStamp), str(TicSum)))
     if not quickMode and verbose:
         beep()
 
-    # Pickle Dictionary
-    pname = DIR + 'protSynsDic.pickle'
-    with open(pname, 'wb') as handle:
-        pickle.dump(protsyns, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-    # return
-    return protSynsDic
+    return protSynsDic, protSynsRDic
 
 '''
 ################################################################################
@@ -393,112 +447,11 @@ if False:
     from cpi import *
 
 if True:
-    verbose = True
-    quickMode = False
-    TicSum = datetime.timedelta(0,0,0)
+    protSynsDic = loadPickle(DIR, 'protSynsDic')
+    protSynsRDic = loadPickle(DIR, 'protSynsRDic')
+    cpiDic = loadPickle(DIR, 'cpiDic')
 
-    timeStamp = ts()
-    print('\n[%s] Running prototype for \'makeProtSynsDic\' function.' % str(timeStamp))
-
-    protsynsfn = 'STITCH Data/protein.aliases.v10.5.txt'
-    protsyns = loadFile(protsynsfn, DIR, withHeaders=False, verbose=verbose, quickMode=quickMode, quickModeLimit = 64488)
-    # v10.5.txt has 48,366,210 lines that are read in 1h 15m.
-    # We can use quickMode to read 644,882 lines in 10s.
-
-    # create set of protein names
-    if verbose > 0:
-        timeStamp = ts()
-        text = '\n[%s] Creating set of protein names.' % str(timeStamp)
-        print(text)
-        count = len(protsyns)
-        bar = ChargingBar('', max = count)
-        Tic = tic()
-    prots = []
-    for row in protsyns:
-        name = row[0]
-        prots.append(name)
-        if verbose > 0:
-            bar.next()
-    prots = set(prots)
-    if verbose > 0:
-        bar.finish()
-        Toc = toc(Tic)
-        TicSum += Toc
-
-    # save protein names
-    timeStamp = ts()
-    print('\n[%s] Saving protein names to text file in %s' % str(timeStamp), DIR)
-    f = open(DIR+'protNames.txt','w')
-    for name in prots:
-        f.write(name+'\n')
-    f.close()
-    # v10.5.txt should have 9,507,839 proteins
-    # This takes 1 minute to do
-
-    # Prime dictionary of protein name aliases
-    if verbose > 0:
-        timeStamp = ts()
-        print('\n[%s] Priming dictionary of protein name aliases.' % str(timeStamp))
-        count = len(prots)
-        bar = ChargingBar('', max = count)
-        Tic = tic()
-    protSynsDic = {}
-    for prot in prots:
-        protSynsDic[prot] = []
-        if verbose > 0:
-            bar.next()
-    if verbose > 0:
-        Toc = toc(Tic)
-        TicSum += Toc
-        bar.finish()
-
-    # Populate dictionary
-    # this takes the most time. For all proteins, it takes 1 hour per percentage point.
-    if verbose > 0:
-        timeStamp = ts()
-        print('\n[%s] Populating dictionary with protein name aliases.' % str(timeStamp))
-        count = len(prots)
-        bar = ChargingBar('', max = count)
-        Tic = tic()
-    for line in protsyns:
-        row = protsyns.pop(0)
-        name, alias, source = row[0], row[1], row[2] # row format is : name alias source
-        # for prot in prots:
-            # we do "prot in name" because we're assuming that the string "name" may be longer than the string "prot". e.g., 9606.ENSP00000170630 is a "name" value, but ENSP000000170630 may be a "prot" value. This is because each protein ("name" value) may have a species suffix (e.g., 9606).
-            # if prot in name:
-                # protSynsDic[prot].append((alias, source))
-        # If "name" and "prot" have the same formating (i.e., species.protein), then we can skip the above code.
-        protSynsDic[name].append((alias, source))
-        if verbose > 0:
-            bar.next()
-    if verbose > 0:
-        bar.finish()
-        Toc = toc(Tic)
-        TicSum += Toc
-
-    # Pickle dictionary
-    if verbose > 0:
-        timeStamp = ts()
-        print('\n[%s] Pickling dictionary.' % str(timeStamp))
-        Tic = tic()
-    pname = DIR + 'protSynsDic.pickle'
-    with open(pname, 'wb') as handle:
-        pickle.dump(protsyns, handle, protocol=pickle.HIGHEST_PROTOCOL)
-    Toc = toc(Tic)
-    TicSum += Toc
-
-    # Verbose exit
-    if verbose > 0:
-        timeStamp = ts()
-        print('\n[%s] Done running prototype for \'makeProtSynsDic\' function.\nTotal elapsed time was %s (h:mm:ss)' % str(timeStamp), str(TicSum))
-    if not quickMode and verbose:
-        beep()
-
-    # 20.95s for 65,000 lines of aliases.
-    # 20.04s for 65,000 lines of aliases.
-    # 21.96s for 65,000 lines of aliases.
-    # 6.05s for 65,000 lines of aliases if "name" = "prot"
-    # 2.63s for 65,000 lines of aliases if "name" = "prot" and prots = set(prots) instead of "if not in: append"
+    # For protein in cpiDic, see if it's in protSynsDic
 
 '''
 ################################################################################
