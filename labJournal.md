@@ -2,6 +2,7 @@
 
 ## To-do list
 
+1. Make a general-purpose function that checks forward and reverse dictionaries. Use the workspace code from `cpirun.py`.
 1. Should consider differentiating DIR to (DIR, outDIR, dataDIR), where
   a. DIR is the working directory containing cpi.py,
   b. outDIR is the directory where results are output (e.g., the pickled dictionaries), and
@@ -19,6 +20,9 @@ Some functions are exactly the same except for the core of the loop which does a
   `quickModeLimit` is set to a specific value for some functions. A fail-safe should be added in case the `quickModeLimit` is greater than the number of iterable items.
 
 
+### Tuesday 10/9
+
+Tested protein dictionaries (abridged versions) forward and backwards. They passed. This means that the `makeDic` function should create a working full dictionary.
 
 ### Monday 10/1
 
