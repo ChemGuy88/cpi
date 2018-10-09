@@ -8,6 +8,7 @@ from bs4 import BeautifulSoup
 from IPython import get_ipython
 from mlFunctions import tic, toc, beep, ts, alarm1, run_from_ipython
 from progress.bar import ChargingBar
+from progress.spinner import Spinner
 
 '''
 Project Name:
@@ -51,7 +52,33 @@ Notes
 ################################################################################
 '''
 
-def loadFile(fileName, DIR, withHeaders=False, verbose=0, quickMode=False, quickModeLimit=10):
+def isCid(string):
+    x = 0
+    if len(string) != 12:
+        x += 1
+    if string[:3] != 'CID':
+        x += 1
+    if x == 0:
+        return True
+    if x != 0:
+        # print(x)
+        return False
+
+def loadPickle(DIR, pickleName):
+    '''
+    Loads a pickled object
+
+    INPUT:  DIR, string, the directory to read from and to.
+            pickleName, a string, the name of the pickle file. Assumes suffix is not provided.
+    RESULT: Returns 'DIR pickleName', a pickle object
+    '''
+
+    pname = '%s%s.pickle' % (DIR, pickleName)
+    with open(pname, 'rb') as handle:
+        pickleObj = pickle.load(handle)
+    return pickleObj
+
+def loadFile(DIR, dataDir, fname, withHeaders=False, verbose=0, quickMode=False, quickModeLimit = 10):
     '''
     Reads tab-delimited file and returns it as a list of lists. Scroll to bottom of Docstring for loading times.
 
@@ -78,19 +105,20 @@ def loadFile(fileName, DIR, withHeaders=False, verbose=0, quickMode=False, quick
     >>> if mem.available <= THRESHOLD:
     ...     print("warning")
     '''
+    # verbose start
     if verbose > 0:
         timeStamp = ts()
         print('\n[%s] Running \'loadFile\' function.' % str(timeStamp))
         TicSum = datetime.timedelta(0,0,0)
         Tic = tic()
-    fname = DIR + fileName
+    fpath = DIR + dataDir + fname
 
     # Get progress bar length
     if verbose > 0:
         timeStamp = ts()
         print('\n[%s] Getting progres bar length.' % str(timeStamp))
     if not quickMode and verbose:
-        with open(fname) as f:
+        with open(fpath) as f:
             lines0 = (f.readline().splitlines()[0] for line in f)
             count = sum(1 for line in lines0)
     if verbose > 0:
@@ -98,7 +126,7 @@ def loadFile(fileName, DIR, withHeaders=False, verbose=0, quickMode=False, quick
         TicSum += Toc
 
     # Main block
-    with open(fname) as f:
+    with open(fpath) as f:
 
         # Read file
         if verbose > 0:
@@ -133,93 +161,96 @@ def loadFile(fileName, DIR, withHeaders=False, verbose=0, quickMode=False, quick
             TicSum += Toc
             timeStamp = ts()
             print('\n[%s] Done running \'loadFile\' function.\nTotal elapsed time was %s (h:mm:ss)' % (str(timeStamp), str(TicSum)))
+        if not quickMode and verbose:
+            beep()
 
-    if not quickMode and verbose:
-        beep()
+    # return statement
     if withHeaders:
         return [[headers]]+lists
     else:
         return lists
 
-def makeCpiDic(DIR):
+def makeCidList(DIR, dataDir='STITCH Data/', fname='protein_chemical.links.v1.0.tsv', verbose=0, quickMode=False, quickModeLimit=None):
     '''
-    Creates and pickles a dictionary of Chemical-Protein Interactions
-
-    INPUT:  DIR, string, the directory to read from and to.
-    OUTPUT: cpiDic, a dictionary
-            cpiDic.pickle, the pickled dictionary in directory [DIR]
     '''
-    # print('\nOpening file')
-    Tic = tic()
-    fname = DIR + 'STITCH Data/protein_chemical.links.v1.0.tsv'
-    f = open(fname)
-    lines = f.readlines()
-    headers = lines[0]
-    lines = lines[1:]
-    # Toc = toc(Tic)
+    # verbose start
+    if verbose > 0:
+        timeStamp = ts()
+        print('\n[%s] Running \'makeCidList\' function.' % str(timeStamp))
+        TicSum = datetime.timedelta(0,0,0)
+        Tic = tic()
+    fpath = DIR + dataDir + fname
 
-    # Pre-process data
-    # print('\nPreprocessing file')
-    Tic = tic()
-    Keys = []
-    lolines = []
-    for line in lines:
-        l = line.split()
-        lolines.append(l)
-        Keys.append(l[0])
-    Set = set(Keys)
-    # Toc = toc(Tic)
+    # Get progress bar length
+    if verbose > 0:
+        timeStamp = ts()
+        print('\n[%s] Getting progress bar length.' % str(timeStamp))
+    if not quickMode and verbose:
+        with open(fpath) as f:
+            lines0 = (f.readline().splitlines()[0] for line in f)
+            count = sum(1 for line in lines0)
+    if verbose > 0:
+        Toc = toc(Tic)
+        TicSum += Toc
 
-    # Initialize dictionary
-    # print('\nInitializing dictionary')
-    Tic = tic()
-    cpiDic = {}
-    for key in Set:
-        cpiDic[key] = []
-    # Toc = toc(Tic)
+    # Main block
+    with open(fpath, 'r') as f:
 
-    # Create dictionary
-    # print('\nCreating dictionary')
-    Tic = tic()
-    for l in lolines:
-        cpiDic[l[0]].append( (l[1], l[2]))
-    # Toc = toc(Tic)
+        # Read file
+        if verbose > 0:
+            timeStamp = ts()
+            print('\n[%s] Reading file.' % str(timeStamp))
+        if quickMode:
+            lines = (f.readline().splitlines()[0] for line in range(quickModeLimit))
+        else:
+            lines = (f.readline().splitlines()[0] for line in f)
+        headers = next(lines)
+        if verbose > 0:
+            Toc = toc(Tic)
+            TicSum += Toc
 
-    # Pickle dictionary
-    pname = DIR + 'cpiDic.pickle'
-    with open(pname, 'wb') as handle:
-        pickle.dump(cpiDic, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        # Split lines
+        if verbose > 0:
+            timeStamp = ts()
+            print('\n[%s] Splitting lines' % str(timeStamp))
+            Tic = tic()
+        if not quickMode and verbose:
+            bar = ChargingBar('', max = count)
+        cidList = []
+        for line in lines:
+            row = line.split('\t')
+            A, B, link, action, bool, score = line[0], line[1], line[2], line[3], line[4], line[5]
+            if isCid(A):
+                cidList.append(A)
+            else:
+                cidList.append(B)
+            if verbose > 0:
+                bar.next()
+        cidList = list(set(cidList))
+        if not quickMode and verbose:
+            bar.finish()
+        if verbose > 0:
+            Toc = toc(Tic)
+            TicSum += Toc
+            timeStamp = ts()
+            print('\n[%s] Done running \'makeCidList\' function.\nTotal elapsed time was %s (h:mm:ss)' % (str(timeStamp), str(TicSum)))
+        if not quickMode and verbose:
+            beep()
 
-    return cpiDic
+    # return statement
+    return cidList
 
-def loadPickle(DIR, pickleName):
-    '''
-    Loads a pickled object
-
-    INPUT:  DIR, string, the directory to read from and to.
-            pickleName, a string, the name of the pickle file. Assumes suffix is not provided.
-    RESULT: Returns 'DIR pickleName', a pickle object
-    '''
-
-    pname = '%s%s.pickle' % (DIR, pickleName)
-    with open(pname, 'rb') as handle:
-        pickleObj = pickle.load(handle)
-    return pickleObj
-
-def downloadCidSyns(cpiDic, alarm=alarm1, quickMode=False):
+def downloadCidSyns(cidList, alarm=alarm1, verbose=0, quickMode=False, quickModeLimit=None):
     '''
     Download all synonyms for a given list of PubChem Compound ID (CID) numbers using PubChem's PUG REST utility. It takes less than 10 minutes to download all the synonyms for the STITCH CPI database on residential broadband.
 
-    INPUT:  cpiDic, a Python dictionary. The list of CIDs is extract from this. This could be changed later to be instead cidList, to allow or more general use.
+    INPUT:  cidList, a list, the list of CIDs.
             alarm, an object (default: alarm = alarm1). This object will be called at the end of the function, when all the synonyms are finished downloading. By default \'alarm1\' is called, which is a series of high and low pitch tones executed in Bash using the operating system.
     OUTPUT: requestResults, a BeautifulSoup4 object.
     '''
 
     UserAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/11.1 Safari/605.1.15'
     Headers = {'User-Agent': UserAgent}
-
-    # Extract list of CIDs from dictionary
-    cidList = [int(cid[-9:]) for cid in list(cpiDic.keys())]
 
     chunkSize = 190 # chunkSize is the number of length-9 CIDs (plus comma) that can fit into a URL, minus the approximately 100 other characters for the PUG request to PubChem servers.
     numChunks = np.ceil(len(cidList)/chunkSize)
@@ -273,7 +304,7 @@ def downloadCidSyns(cpiDic, alarm=alarm1, quickMode=False):
 
     return requestResults
 
-def makeCidSynsDic(DIR, cpiDic):
+def makeChemSynsDic(DIR, cidList, verbose=0, quickMode=None, quickModeLimit=None):
     '''
     Creates a dictionary of CID (compound ID) synonyms. Synonyms are acquired by
     using the PUG REST utility from PubChem (NIH). Requires internet connection.
@@ -281,42 +312,58 @@ def makeCidSynsDic(DIR, cpiDic):
         STITCH_ID : [synonym1, synonym2, ... ]
 
     INPUT:  DIR, string, the directory to read from and to.
-            cpiDic, a dic, the dictionary of CPIs (chemical-protein interactions)
-    OUTPUT: cidSynsDic, a dic, the dictionary of CID synonyms.
+            cidList, a list, the list of CIDs.
+    OUTPUT: chemSynsDic, a dic, the dictionary of CID synonyms (i.e., CID -> chemical name).
+            chemSynsRDic, a dic, the dictionary of chemical name synonyms (i.e., chemical name -> CID).
     '''
 
     # Download synonyms
-    requestResults = downloadCidSyns(cpiDic)
+    requestResults = downloadCidSyns(cidList, verbose=0, quickMode=None, quickModeLimit=None)
 
     # Process html results to list of strings
-    cidSynsDic = {}
-    for cid in requestResults:
-        name = cid.cid.text
-        syns = [syn.text for syn in cid.findAll('synonym')]
-        cidSynsDic[name] = syns
+    chemSynsDic = {}
+    for result in requestResults:
+        cid = result.result.text
+        syns = [syn.text for syn in result.findAll('synonym')]
+        chemSynsDic[cid] = syns
 
-    # Save requestResults as JSON
-    file = open(DIR + 'cidSynsDic.JSON', 'w')
-    json.dump(cidSynsDic, file)
-    file.close()
+    # create set of chemical names
+    namesList = []
+    for listOfNames in chemSynsDic.values():
+        for name in listOfNames:
+            namesList.append(name)
+    namesList = set(namesList)
 
-    # Pickle cidSynsDic
-    pname = DIR + 'cidSynsDic.pickle'
+    # prime reverse dictionary
+    chemSynsRDic = {}
+    for namesList in chemSynsDic.values():
+        for name in namesList:
+            chemSynsRDic[name] = []
+
+    # populate dictionary
+    for cid, listOfNames in namesList:
+        for name in listOfNames:
+            chemSynsRDic[name].append(cid)
+
+    # Pickle chemSynsDic
+    pname = DIR + 'chemSynsDic.pickle'
     with open(pname, 'wb') as handle:
-        pickle.dump(cidSynsDic, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        pickle.dump(chemSynsDic, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-    return cidSynsDic
+    return chemSynsDic, chemSynsRDic
 
-def makeProtSynsDic(DIR, protsynsfn='STITCH Data/9606.protein.aliases.v10.5.txt', verbose=0, quickMode=False, quickModeLimit=250000):
+def makeProtSynsDic(DIR, dataDir='STITCH Data', fname='/9606.protein.aliases.v10.5.txt', verbose=0, quickMode=False, quickModeLimit=250000):
     '''
     Docstring
     '''
-    TicSum = datetime.timedelta(0,0,0)
 
-    timeStamp = ts()
-    print('\n[%s] Running prototype for \'makeProtSynsDic\' function.' % str(timeStamp))
+    # Verbose start
+    if verbose > 0:
+        TicSum = datetime.timedelta(0,0,0)
+        timeStamp = ts()
+        print('\n[%s] Running \'makeProtSynsDic\' function.' % str(timeStamp))
 
-    protsyns = loadFile(protsynsfn, DIR, withHeaders=False, verbose=verbose, quickMode=quickMode, quickModeLimit = quickModeLimit)
+    protsyns = loadFile(DIR=DIR, dataDir=dataDir, fname=fname, withHeaders=False, verbose=verbose, quickMode=quickMode, quickModeLimit = quickModeLimit)
     # v10.5.txt has 48,366,210 lines that are read in 1h 15m.
 
     # create set of protein names and aliases
@@ -341,17 +388,6 @@ def makeProtSynsDic(DIR, protsynsfn='STITCH Data/9606.protein.aliases.v10.5.txt'
         bar.finish()
         Toc = toc(Tic)
         TicSum += Toc
-
-    # save protein names
-    '''
-    timeStamp = ts()
-    print('\n[%s] Saving protein names to text file in %s' % (str(timeStamp), DIR))
-    f = open(DIR+'protNames.txt','w')
-    for name in prots:
-        f.write(name+'\n')
-    f.close()
-    '''
-    # v10.5.txt should have 9,507,839 proteins
 
     # Prime dictionary of protein name aliases
     if verbose > 0:
@@ -424,11 +460,244 @@ def makeProtSynsDic(DIR, protsynsfn='STITCH Data/9606.protein.aliases.v10.5.txt'
     # Verbose exit
     if verbose > 0:
         timeStamp = ts()
-        print('\n[%s] Done running prototype for \'makeProtSynsDic\' function.\nTotal elapsed time was %s (h:mm:ss)' % (str(timeStamp), str(TicSum)))
+        print('\n[%s] Done running \'makeProtSynsDic\' function.\nTotal elapsed time was %s (h:mm:ss)' % (str(timeStamp), str(TicSum)))
     if not quickMode and verbose:
         beep()
 
     return protSynsDic, protSynsRDic
+
+def makeLinksDic(DIR, dataDir='STITCH Data/', fname='9606.actions.v5.0.tsv', verbose=0, quickMode=False, quickModeLimit=1000):
+    '''
+    'links' means interactions.
+
+    Inputs (5):
+      1. fname,
+      2. DIR,
+      3. verbose,
+      4. quickMode,
+      5. quickModeLimit,
+
+    Output (3):
+      Saves three dictionary objects as pickles.
+      1. ptocDic,
+      2. ctopDic,
+      3. pairsToLinksDic,
+    '''
+    # create dictionary of interactions
+    TicSum = datetime.timedelta(0,0,0)
+
+    timeStamp = ts()
+    print('\n[%s] Running prototype for \'makeLinksDic\' function.' % str(timeStamp))
+
+    # Load file
+    listOfLinks = loadFile(DIR, dataDir, fname, withHeaders=False, verbose=verbose, quickMode=quickMode, quickModeLimit = quickModeLimit)
+
+    # Create set of proteins, CIDs, and links
+    if verbose > 0:
+        timeStamp = ts()
+        text = '\n[%s] Creating sets of protein names, CIDs, CID-protein pairs, and interaction types (links).' % str(timeStamp)
+        print(text)
+        count = len(listOfLinks)
+        bar = ChargingBar('', max = count)
+        Tic = tic()
+    setProts = []
+    setCids = []
+    setPairs = []
+    setLinks = []
+    for line in listOfLinks:
+        A, B, link, action, bool, score = line[0], line[1], line[2], line[3], line[4], line[5]
+        if isCid(A):
+            setCids.append(A)
+        else:
+            setProts.append(A)
+        setPairs.append((A,B))
+        setLinks.append(link)
+        if verbose > 0:
+            bar.next()
+    setProts = set(setProts)
+    setCids = set(setCids)
+    setPairs = set(setPairs)
+    setLinks = set(setLinks)
+    if verbose > 0:
+        bar.finish()
+        Toc = toc(Tic)
+        TicSum += Toc
+
+    # Prime protein-to-CID dictionary
+    if verbose > 0:
+        timeStamp = ts()
+        print('\n[%s] Priming protein-to-CID dictionary.' % str(timeStamp))
+        count = len(setProts)
+        bar = ChargingBar('', max = count)
+        Tic = tic()
+    ptocDic = {}
+    for prot in setProts:
+        ptocDic[prot] = []
+        if verbose > 0:
+            bar.next()
+    if verbose > 0:
+        print('')
+        Toc = toc(Tic)
+        TicSum += Toc
+        bar.finish()
+
+    # Prime CID-to-proteins dictionary
+    if verbose > 0:
+        timeStamp = ts()
+        print('\n[%s] Priming CID-to-proteins dictionary.' % str(timeStamp))
+        count = len(setCids)
+        bar = ChargingBar('', max = count)
+        Tic = tic()
+    ctopDic = {}
+    for cid in setCids:
+        ctopDic[cid] = []
+        bar.next()
+    if verbose > 0:
+        print('')
+        Toc = toc(Tic)
+        TicSum += Toc
+        bar.finish()
+
+    # Prime (CID-protein pair)-to-(link type) dictionary
+    if verbose > 0:
+        timeStamp = ts()
+        print('\n[%s] Priming (CID-protein pair)-to-(link type) dictionary.' % str(timeStamp))
+        count = len(setPairs)
+        bar = ChargingBar('', max = count)
+        Tic = tic()
+    pairsToLinksDic = {}
+    for pair in setPairs:
+        pairsToLinksDic[pair] = []
+        bar.next()
+    if verbose > 0:
+        print('')
+        Toc = toc(Tic)
+        TicSum += Toc
+        bar.finish()
+
+    # Populate dictionaries
+    if verbose > 0:
+        timeStamp = ts()
+        print('\n[%s] Populating protein-to-CIDs and CID-to-proteins dictionaries.' % str(timeStamp))
+        count = len(listOfLinks)
+        bar = ChargingBar('', max = count)
+        Tic = tic()
+    for line in listOfLinks:
+        A, B, link, action, bool, score = line[0], line[1], line[2], line[3], line[4], line[5]
+        if isCid(A):
+            ctopDic[A].append(B)
+        else:
+            ptocDic[A].append(B)
+        pairsToLinksDic[(A,B)].append((link, action, bool, score))
+        if verbose > 0:
+            bar.next()
+    if verbose > 0:
+        bar.finish()
+        Toc = toc(Tic)
+        TicSum += Toc
+
+    # Pickle dictionaries
+    if verbose > 0:
+        timeStamp = ts()
+        print('\n[%s] Pickling dictionaries.' % str(timeStamp))
+        Tic = tic()
+    pname = DIR + 'ptocDic.pickle'
+    with open(pname, 'wb') as handle:
+        pickle.dump(ptocDic, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    pname = DIR + 'ctopDic.pickle'
+    with open(pname, 'wb') as handle:
+        pickle.dump(ctopDic, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    pname = DIR + 'pairsToLinksDic.pickle'
+    with open(pname, 'wb') as handle:
+        pickle.dump(pairsToLinksDic, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    Toc = toc(Tic)
+    TicSum += Toc
+
+    # Verbose exit
+    if verbose > 0:
+        timeStamp = ts()
+        print('\n[%s] Done running \'makeProtSynsDic\' function.\nTotal elapsed time was %s (h:mm:ss)' % (str(timeStamp), str(TicSum)))
+    if not quickMode and verbose:
+        beep()
+
+    # Return statement
+    return ctopDic, ptocDic, pairsToLinksDic
+
+def checkDics(DIR, dic1name='protSynsDic', dic2name='ptocDic', elements='keys'):
+    '''
+    Does set operations on two dictionaries.
+    ======================================================================
+    Results for reference:
+    ======================================================================
+    For dictionaries generated from species 9606 (Humans), the following results are obtained:
+
+    linkProts has 0 unique proteins.
+    synsProts has 3105 unique proteins.
+    They share 17352 (84.82%) proteins.
+    ======================================================================
+
+    '''
+    # Rename variables to generic names
+    dic1 = loadPickle(DIR, dic1name)
+    dic2 = loadPickle(DIR, dic2name)
+    dic1keys = set(dic1.keys())
+    dic2keys = set(dic2.keys())
+    print('%s has %d proteins.\n%s has %d %s.' % (dic1name, len(dic1keys), dic2name, len(dic2keys), elements))
+    dic1extra = dic1keys - dic2keys
+    dic2extra = dic2keys - dic1keys
+    common = dic1keys & dic2keys
+    total = dic1keys | dic2keys
+    a, b, t, u = len(dic1extra), len(dic2extra), len(common), len(total)
+    print('%s has %d unique proteins.\n%s has %d unique %s.\nThey share %d (%0.2f%%) of %s.' % (dic1name, a, dic2name, b, elements, t, 100*t/u), elements)
+
+def blocks(file, size=65536):
+    '''
+    From https://stackoverflow.com/a/9631635/5478086
+    '''
+    while True:
+        b = file.read(size)
+        if not b:
+            break
+        yield b
+
+def getNumLines(fname):
+    '''
+    From https://stackoverflow.com/a/9631635/5478086
+    '''
+    with open(fname, 'r', encoding="utf-8", errors='ignore') as f:
+        genObj = (bl.count('\n') for bl in blocks(f))
+        s = sum(genObj)
+        print('%s has %d lines.' % (fname, s))
+
+def getNumLines(fname, verbose=1):
+    '''
+    docstring
+    '''
+    # Verbose start
+    if verbose > 0:
+        TicSum = datetime.timedelta(0,0,0)
+        timeStamp = ts()
+        print('\n[%s] Counting number of lines in %s.' % (str(timeStamp), fname))
+        # spinner = Spinner('')
+        Tic = tic()
+    with open(fname) as f:
+        n = 0
+        lines = (f.readline() for line in f)
+        for line in lines:
+            n += 1
+            if verbose > 0:
+                pass
+                # spinner.next()
+    if verbose > 0:
+        # spinner.finish()
+        Toc = toc(Tic)
+        TicSum += Toc
+
+    # verbose exit
+    if verbose > 0:
+        print('\n[%s] There were %s lines in %s.' % (str(timeStamp), n, fname))
+
+    return n
 
 '''
 ################################################################################
@@ -436,22 +705,7 @@ def makeProtSynsDic(DIR, protsynsfn='STITCH Data/9606.protein.aliases.v10.5.txt'
 ################################################################################
 '''
 
-if False:
-    '''Copy and paste below code to interpreter'''
-    from importlib import reload
-
-    try:
-        reload(cpi)
-    except NameError:
-        import cpi
-    from cpi import *
-
-if True:
-    protSynsDic = loadPickle(DIR, 'protSynsDic')
-    protSynsRDic = loadPickle(DIR, 'protSynsRDic')
-    cpiDic = loadPickle(DIR, 'cpiDic')
-
-    # For protein in cpiDic, see if it's in protSynsDic
+# see cpirun.py for workspace
 
 '''
 ################################################################################
@@ -467,7 +721,7 @@ def main():
         msg = '\ncpi.py requires arguments to run. Try the following:\n\n\
         \'makeCpiDic\'          -- create CPI dictionary\n\
         \'loadCpiDic\'          -- load CPI dictionary\n\
-        \'makeCidSynsDic\'      -- create CID synonyms dictionary\n\
+        \'makeChemSynsDic\'      -- create CID synonyms dictionary\n\
         \'loadCidSynsDic\'      -- load the CID synonyms dictionary\n\
         \n'
         print(msg)
@@ -504,25 +758,25 @@ def main():
             print("Unexpected error:", sys.exc_info()[0])
         else:
             results.append('cpiDic = loadPickle(DIR, \'cpiDic\')')
-    if 'makeCidSynsDic' in args:
+    if 'makeChemSynsDic' in args:
         try:
             cpiDic = loadPickle(DIR, 'cpiDic')
         except FileNotFoundError:
-            print('\nmakeCidSynsDic error.\n\
+            print('\nmakeChemSynsDic error.\n\
     The file was not found. Try running \'makeCpiDic\' first, or check the \'DIR\' variable to see if it is pointing to a valid directory.\n\'DIR\' is pointing to %s.\n' % DIR)
         except:
             print("Unexpected error:", sys.exc_info()[0])
         else:
-            cidSynsDic = makeCidSynsDic(DIR, cpiDic)
-            results.append('# cidSynsDic was created.')
+            chemSynsDic = makeChemSynsDic(DIR, cpiDic)
+            results.append('# chemSynsDic was created.')
     if 'loadCidSynsDic' in args:
         try:
-            cidSynsDic = loadPickle(DIR, 'cidSynsDic')
+            chemSynsDic = loadPickle(DIR, 'chemSynsDic')
         except FileNotFoundError:
             print('\nloadCidSynsDic error.\n\
     The file was not found. Check the \'DIR\' variable to see if it is pointing to a valid directory or if the file exists.\n\'DIR\' is pointing to %s.\n' % DIR)
         else:
-            results.append('cidSynsDic = loadPickle(DIR, \'cidSynsDic\')')
+            results.append('chemSynsDic = loadPickle(DIR, \'chemSynsDic\')')
     # Convenient list to copy and paste into IPython
     if len(results) > 0:
         print('Commands executed. Copy and paste the below lines to load results into the interpreter.\n')
