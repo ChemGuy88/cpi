@@ -101,7 +101,7 @@ Here's an idea on how to build my corpus, based on [previous notes](#10/5/18).
 
 To illustrate:  
 
-![venDiagram](/Users/Herman/Documents/jzhang/cpi/labJournalDiagrams/venDiagram.png)
+![venDiagram](/labJournalDiagrams/venDiagram.png)
 
 
 ### <a name="10/11/18"></a> Thursday 10/11
