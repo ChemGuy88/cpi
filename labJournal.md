@@ -2,8 +2,7 @@
 
 ## To-do list
 
-1. Make a general-purpose function that checks forward and reverse dictionaries. Use the workspace code from `cpirun.py`.
-1. Should consider differentiating DIR to (DIR, outDIR, dataDIR), where
+1. Should consider **differentiating DIR** to (DIR, outDIR, dataDIR), where
   a. DIR is the working directory containing cpi.py,
   b. outDIR is the directory where results are output (e.g., the pickled dictionaries), and
   c. dataDIR is the directory where primary data is located (e.g., the STRING and STITCH files)
@@ -14,24 +13,45 @@ Some functions are exactly the same except for the core of the loop which does a
   for line in lines:
       output = function(line)
   ```
-4. **Check lower bound for `quickModeLimit` in...**  
-  ...
-3. **Add fail-safe for `quickModeLimit`**.  
-  `quickModeLimit` is set to a specific value for some functions. A fail-safe should be added in case the `quickModeLimit` is greater than the number of iterable items.
+3. **Remove usage of loadFile**  
+Remove usage of `loadFile` from
+  * makeProtSynsDic
+  * makeLinksDic
+
+4. **Use `getQuickModeLimit` on applicable functions**  
+  * loadFile  
+  * makeCidList
+  * makeProtSynsDic
+  * makeLinksDic
 
 ## Journal Entries
 
+* [Tuesday 10/23](#10/23/18)
+* [Monday 10/22](#10/22/18)
+* [Friday 10/19](#10/19/18)
 * [Thursday 10/11](#10/11/18)
 * [Tuesday 10/9](#10/9/18)
 * [Friday 10/5](#10/5/18)
 * [Monday 10/1](#10/1/18)
 
-### <a name="10/19/18"></a> Monday 10/22
+### <a name="10/23/18"></a> Tuesday 10/23
+
+Fixed the dictionary checkers by adding a new function `getName`. It is used for extracting `alias` and `entity` values.
+
+Removed `quickMode` and `quickModeLimit` from `makeChemSynsDic` and `downloadCidSyns`, because `makeChemSynsDic` is a function of `cidLists` which is just a `list`, and it's easier to manipulate that list than to implement a `quickMode` for the function. However, if `makeChemSynsDic` at some point takes in a file that calls `makeCidList`, it will need values for `quickMode` and `quickModeLimit`.
+
+Still need to:
+
+1. fix the CID prefixes
+2. check the dictionary makers again.
+3. Test `getQuickModeLimit` on all functions that use it.
+
+### <a name="10/22/18"></a> Monday 10/22
 
 Continued working on fixing the `makeChemSynsDic` function. There are two problems.
 
 1. The dictionary keys are in the format `123456789` instead of `CIDm123456789`/`CIDs123456789` format. This is because the synonyms are fetched from NIH via the PUG REST API. The `CIDm`/`CIDs` prefixes are not allowed in the API. So I have to restore the prefixes after the synonyms are fetched.
-2. The dictionary checked doesn't work for `chemSynsDic` because the elements are string singletons, not tuples (as is the case in `protSynsDic`, for which I had originally designed the dictionary-checker function).
+2. The dictionary checker doesn't work for `chemSynsDic` because the elements are string singletons, not tuples (as is the case in `protSynsDic`, for which I had originally designed the dictionary-checker function).
 
 One possible solution for (2) is:
 
@@ -52,18 +72,18 @@ with
 
 ```Python
 for element in aliases:
-        alias, source = [*element][0]
-        pass
+  alias, source = [*element][0]
+  pass
 ```
 
 or
 
 ```Python
 for element in aliases:
-  if len(element) == 0:
-      alias = element
-  else:
-      alias = [*element][0]
+  if isinstance(element, string):
+    alias = element
+  elif isinstance(element, (tuple, list)):
+    alias = element[0]
   pass
 ```
 
@@ -81,20 +101,24 @@ Here's an idea on how to build my corpus, based on [previous notes](#10/5/18).
 
 To illustrate:  
 
-![venDiagram](/Users/Herman/Documents/jzhang/cpiDiagrams/venDiagram.png)
+![venDiagram](/Users/Herman/Documents/jzhang/cpi/labJournalDiagrams/venDiagram.png)
 
 
 ### <a name="10/11/18"></a> Thursday 10/11
 
 Improving `makeChemSynsDic` function. Modified flowchart to match. I'm debating whether `makeChemSynsDic` can intake three files, and make `cidLists` from each one. I've made enough progress to splice the correction into the `cpi` module from my workspace.
-Also, I think I realized why my method for counting lines in a file was not giving consistent results. I used `(f.readline for line in f)`. I suspect the reason this halves the number of lines is because `f.readline` happens after `for line in f`, so you're essentially reading every other line. Indeed, this is confirmed when I run
+
+Also, I think I realized why my method for counting lines in a file was not giving consistent results. I used `(f.readline for line in f)`. I suspect the reason this halves the number of lines is because `f.readline` happens after `for line in f`, so you're essentially reading every other line. Indeed, this is confirmed when I run the following code on the file `9606.protein_chemical.links.detailed.v5.0.tsv`.
+
 ```Python
 In [112]: with open(fpath) as f:
      ...:     gen = (f.readline() for line in f)
      ...:     for _ in range(5):
      ...:         print(next(gen))
 ```
+
 which yields
+
 ```
 CIDm91758680	9606.ENSP00000257254	0	0	0	278	279
 
@@ -122,9 +146,11 @@ CIDm91758408    9606.ENSP00000259791    0       0       0       194     194
 CIDm91758408    9606.ENSP00000262366    0       0       0       169     169
 ```
 
+If I count the number of newline characters `('\n')` in the same file, I get 21,773,492 (a). If I count the number of iterations it takes to do f.readline(), I get 10,886,746 (b). The ratio a/b is exactly 2, which again confirms my suspicion that the code was reading every other line.
+
 ### <a name="10/9/18"></a> Tuesday 10/9
 
-Tested protein dictionaries (abridged versions) forward and backwards. They passed. This means that the `makeDic` function should create a working full dictionary.
+Tested protein dictionaries (abridged versions) forward and backwards. They passed. This means that the `makeProtSynsDic` function should create a working full dictionary.
 
 ### <a name="10/5/18"></a> Friday 10/5
 
