@@ -26,6 +26,7 @@ Remove usage of `loadFile` from
 
 ## Journal Entries
 
+* [Monday 10/29](#10/29/18)
 * [Tuesday 10/23](#10/23/18)
 * [Monday 10/22](#10/22/18)
 * [Friday 10/19](#10/19/18)
@@ -33,6 +34,11 @@ Remove usage of `loadFile` from
 * [Tuesday 10/9](#10/9/18)
 * [Friday 10/5](#10/5/18)
 * [Monday 10/1](#10/1/18)
+
+### <a name="10/29/18"></a> Monday 10/29
+
+I started by trying to see how important the CID prefixes are. In the set of all CIDs, about half are stereo-specific, and the other half are not. Until I learn more it seems they cannot be merged, because although they point to some common proteins, there are differences.
+While working on the CID prefix issue I realized I can make the CPI dic by altering the `makeCidList` function. So I can put that new code under another function name, because I still need to make cidList to get all the aliases under PUG REST. I've put this new `make` function in `cpirun.py` under `makeCpiDic`. I have also saved the `cidList` and `cpiDic` objects as pickles in `\9606Pickles`. Because they took 12 and 21 minutes to generate, respectively.
 
 ### <a name="10/23/18"></a> Tuesday 10/23
 
