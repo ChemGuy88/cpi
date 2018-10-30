@@ -13,7 +13,7 @@ This document is just me putting my thoughts down to paper to better understand 
 
 1. [Summary of Files and Contents](#fileTypeSummary)
 1. [The Chemical-Protein Interactions File](#cpiDic)
-  * [Chemical ID Prefix](#CIDPrefix)
+    * [Chemical ID Prefix](#CIDPrefix)
 2. [The Chemical-Protein Interaction _Types_ File](#cpiTypesDic)
 3. [The Protein Dictionary](#ProteinDic)
 4. [The Species Dictionary](#SpeciesDic)
