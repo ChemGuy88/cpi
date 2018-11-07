@@ -26,6 +26,7 @@ Remove usage of `loadFile` from
 
 ## Journal Entries
 
+* [Tuesday 11/6](#11/6/18)
 * [Monday 10/29](#10/29/18)
 * [Tuesday 10/23](#10/23/18)
 * [Monday 10/22](#10/22/18)
@@ -34,6 +35,80 @@ Remove usage of `loadFile` from
 * [Tuesday 10/9](#10/9/18)
 * [Friday 10/5](#10/5/18)
 * [Monday 10/1](#10/1/18)
+
+### Tuesday 11/6
+
+I had to clear my mind and start from scratch. The following are the core functions I need.
+```Python
+def makeCpiDic():
+    '''
+    9606.protein_chemical.links.v5.0.tsv --> cpiDic
+
+    e.g.:
+    key             value
+    CIDm91758680    9606.ENSP00000257254
+    '''
+    pass
+
+def getCidList():
+    '''
+    cpiDic --> cidList
+
+    e.g.:
+    ['CIDm53255435',
+     'CIDs45273760',
+     'CIDs11472526',
+     'CIDs44423364',
+     'CIDm71718190']
+    '''
+    pass
+
+def makeChemSynsDic():
+    '''
+    same as previous version, but with prefixes
+    '''
+    pass
+
+def makeProtSynsDic():
+    '''
+    same as previous version, but without loadFile
+    '''
+    pass
+```
+
+Fixing the prefixes issue is the main problem, so I kept working on that. I was just playing around with the dictionary to see what to do. Below is a summary of results.
+
+```Python
+mCount, sCount, tCount, missing = countCidTypes1(cpiDic)
+# mCount: 412753
+# sCount: 374286
+# total:  787039
+# missing: 0
+
+lm, ls, lms = countCidTypes2(cpiDic)
+# 29697 | Number of merged stereo-isomers ('m' CIDs)
+# 68164 | Number of stereo isomers ('s' CIDs)
+# 344589 | Number of 'm' and 's' CIDs
+
+mCount == lms+lm
+# True
+sCount == lms+ls
+# True
+tCount == lms+lm+ls
+# True
+```
+
+My understanding of the problem, I think, will be aided by elaborating on the meaning of the following visualization:
+```
+CID  |  CIDs    | CIDm
+-------------------------
+..1  |  CIDs..1 | CIDm..1
+..2  |  ---     | CIDm..2
+..3  |  CIDs..3 | ---
+..4  |  CIDs..4 | CIDm..4
+```
+
+Besides that I also fleshed out the docstring to `cpi.py` and `cpirun.py`. I also added a new module, `cpiaux.py`. I moved all debugging functions to the latter.
 
 ### <a name="10/29/18"></a> Monday 10/29
 
