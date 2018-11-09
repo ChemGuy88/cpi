@@ -36,7 +36,16 @@ Remove usage of `loadFile` from
 * [Friday 10/5](#10/5/18)
 * [Monday 10/1](#10/1/18)
 
-### Tuesday 11/6
+### <a name="11/9/18"></a> Friday 11/9
+
+The next thing to do is
+
+1. compare `cpiDic[CIDs] == cpidDic[CIDm]` for all CID.
+2. confirm that interaction for “m”-type chemical IDs implies interaction for all “s”-type chemical IDs.
+
+>However, the issue is not completely resolved because (1) there are instances in which some “s” and “m” pairs do not point to the exact same set. (2) Some chemicals IDs are only “m” and some are only “s”. Also, (3) I have to confirm that interaction for “m”-type chemical IDs implies interaction for all “s”-type chemical IDs.
+
+### <a name="11/6/18"></a> Tuesday 11/6
 
 I had to clear my mind and start from scratch. The following are the core functions I need.
 ```Python
@@ -86,9 +95,9 @@ mCount, sCount, tCount, missing = countCidTypes1(cpiDic)
 # missing: 0
 
 lm, ls, lms = countCidTypes2(cpiDic)
-# 29697 | Number of merged stereo-isomers ('m' CIDs)
-# 68164 | Number of stereo isomers ('s' CIDs)
-# 344589 | Number of 'm' and 's' CIDs
+# 29697 | Number of CIDs that appear just as merged stereo-isomers ('m' CIDs)
+# 68164 | Number of CIDs that appear just as stereo isomers ('s' CIDs)
+# 344589 | Number of CIDs that appear as both 's' and 'm'.
 
 mCount == lms+lm
 # True
