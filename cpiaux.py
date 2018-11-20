@@ -271,7 +271,7 @@ def getCidSet(cpiDic):
     --------
     >>> cpiDic = {'CIDm53255435' : ['9606.ENSP00000256119', '9606.ENSP00000285379']}
     >>> getCidSet(cpiDic)
-    {53255435}
+    {'53255435'}
     '''
     cidList = list(cpiDic.keys())
     cidSet = set()
@@ -319,6 +319,7 @@ def countCidTypes2(cpiDic):
     mSet = set()
     sSet = set()
     msSet = set()
+    cidSet = getCidSet(cpiDic)
     for cid in cidSet:
         mCheck = 'CIDm'+cid in cpiKeys
         sCheck = 'CIDs'+cid in cpiKeys
@@ -335,9 +336,9 @@ def countCidTypes2(cpiDic):
     lm = len(mSet)
     ls = len(sSet)
     text = \
-    '%d | Number of merged stereo-isomers (\'m\' CIDs)\n\
-%d | Number of stereo isomers (\'s\' CIDs)\n\
-%d | Number of \'m\' and \'s\' CIDs' % (lm, ls, lms)
+    '%d | Number of CIDs that appear just as merged stereo-isomers (\'m\' CIDs)\n\
+%d | Number of CIDs that appear just as stereo isomers (\'s\' CIDs)\n\
+%d | Number of CIDs that appear as both \'m\' and \'s\' CIDs' % (lm, ls, lms)
     print(text)
     return lm, ls, lms, msSet, mSet, sSet
 
@@ -356,19 +357,73 @@ def countCidTypes(cpiDic):
 
     return a and b and c
 
-def f():
-    pass
+def getCidBags(cpiDic):
+    '''
+    Are m and s CIDs equivalent?
+    '''
+    cidSet = getCidSet(cpiDic)
+    mbag = set()
+    sbag = set()
+    msbag = set()
+    mseq = 0 # a = x, b = x
+    m1 = 0 # a = None, b = x
+    s1 = 0 # a = x, b = None
+    ms0 = 0 # a = None, b = None
+    ms1 = 0 # a = x, b = y
+    for cid in cidSet:
+        try:
+            mcid = 'CIDm'+cid
+            a = cpiDic[mcid]
+        except KeyError:
+            a = None
+        try:
+            scid = 'CIDs'+cid
+            b = cpiDic[scid]
+        except KeyError:
+            b = None
+        if isinstance(a, type(None)) or isinstance(b, type(None)):
+            if isinstance(a, type(None)) and isinstance(b, type(None)):
+                print('This shouldn\'t happen!\nBoth CID types do not exist for %s' % cid)
+                ms0 += 1
+                break
+            elif isinstance(a, type(None)):
+                sbag.add(cid)
+                s1 += 1
+            elif isinstance(b, type(None)):
+                mbag.add(cid)
+                m1 += 1
+        elif a == b:
+            msbag.add(cid)
+            mseq += 1
+        elif a != b:
+            mbag.add(cid)
+            sbag.add(cid)
+            ms1 += 1
+    lcs = len(cidSet)
+    d = lcs - mseq
 
-    lm, ls, lms, msSet, mSet, sSet = countCidTypes2(cpiDic)
+    # QC
+    if verbose > 0:
+        print('len(msbag) == mseq # %s' % str(len(msbag) == mseq))
+        print('len(mbag) == m1 + ms1 # %s' % str(len(mbag) == m1 + ms1))
+        print('len(sbag) == s1 + ms1 # %s' % str(len(sbag) == s1 + ms1))
+        print('d == m1 + s1 + ms0 + ms1 # %s' % str(d == m1 + s1 + ms0 + ms1))
 
-    for cid in msSet:
+    text = '%d\t| %d\t| %d\t| %d CID numbers out of %d, or %0.1f%%, have equivalent m and s results. That means %d are unique.' % (mseq, lcs, d, mseq, lcs, mseq/lcs*100, d)
+    print(text)
 
+    text1 = '\n\
+             Table illustrating the possible values and combinations of m and s-type CID numbers:\n\
+             _______________________________________________________________\n\
+             {:>8} {:>8} | {:>8} | {:>8} | {:>8} | {:>8} |\n\
+             {:>8} {:>8} | {:>8} | {:>8} | {:>8} | {:>8} |\n\n\
+             Table with results of counting each of the above cases\n\
+             _______________________________________________________________\n\
+             {:>8} {:>8} | {:>8} | {:>8} | {:>8} | {:>8} |\n\
+             {:>8} {:>8} | {:>8} | {:>8} | {:>8} | {:>8} |'.format('m:','x','None','x','None','x',\
+                                                                   's:','x','None','None','x','y',\
+                                                                   'var:','mseq','ms0','m1','s1','ms1',\
+                                                                   'count:',str(mseq),str(ms0),str(m1),str(s1),str(ms1))
+    print(text1)
 
-# Are m and s CIDs equivalent?
-results = 0
-for cid in cidSet:
-    a = cpiDic['CIDm'+cid]
-    b = cpiDic['CIDs'+cid]
-    if a == b:
-        results += 1
-print(results)
+    return mbag, sbag, msbag
