@@ -6,14 +6,25 @@ import matplotlib.pyplot as plt
 import numpy as np
 from bs4 import BeautifulSoup
 from IPython import get_ipython
-from mlFunctions import tic, toc, beep, ts, alarm1, run_from_ipython
+from mlFunctions import tic, toc, beep, ts, alarm1, run_from_ipython, getNumLines
 from progress.bar import ChargingBar
 from progress.spinner import Spinner
 
 '''
-Project Name:
+Project Name
+------------
 
     cpi -- Chemical-Protein Interaction
+
+File name
+---------
+
+    cpi.py
+
+File Description
+----------------
+
+    Main module for this project.
 
     It is recommended to run this in the command line thus:
 
@@ -77,6 +88,33 @@ def loadPickle(DIR, pickleName):
     with open(pname, 'rb') as handle:
         pickleObj = pickle.load(handle)
     return pickleObj
+
+def getQuickModeLimit(quickModeLimit, maximum):
+    '''
+    Makes sure the quickModeLimit is not less than the maximum number of iterables.
+
+    If the limit is a float, it assumes it's the percentage of iterables to operate on.
+
+    If the limit is an integer, it assumes its the number of iterables to operate on.
+
+    If no limit is given (is NoneType), then the smaller of 500 iterations or 1% of the maximum will be returned.
+    '''
+    if isinstance(quickModeLimit, float):
+        quickModeLimit = int(np.floor(quickModeLimit * maximum))
+        if quickModeLimit >= maximum:
+            quickModeLimit = int(np.floor(0.1 * maximum))
+            quickModeLimit = min([500,quickModeLimit])
+    elif isinstance(quickModeLimit, int):
+        if quickModeLimit >= maximum:
+            quickModeLimit = int(np.floor(0.1 * maximum))
+            quickModeLimit = min([500,quickModeLimit])
+    elif isinstance(quickModeLimit, type(None)):
+        quickModeLimit = getQuickModeLimit(1, maximum)
+    else:
+        # warning
+        pass
+
+    return quickModeLimit
 
 def loadFile(DIR, dataDir, fname, withHeaders=False, verbose=0, quickMode=False, quickModeLimit = 10):
     '''
@@ -170,8 +208,15 @@ def loadFile(DIR, dataDir, fname, withHeaders=False, verbose=0, quickMode=False,
     else:
         return lists
 
-def makeCidList(DIR, dataDir='STITCH Data/', fname='protein_chemical.links.v1.0.tsv', verbose=0, quickMode=False, quickModeLimit=None):
+def makeCpiDic():
     '''
+    See cpirun.py
+    '''
+    pass
+
+def makeCidList(DIR, dataDir, outDir, fname='9606.protein_chemical.links.v5.0.tsv', verbose=0, quickMode=False, quickModeLimit=.1):
+    '''
+    Docstring
     '''
     # verbose start
     if verbose > 0:
@@ -179,68 +224,104 @@ def makeCidList(DIR, dataDir='STITCH Data/', fname='protein_chemical.links.v1.0.
         print('\n[%s] Running \'makeCidList\' function.' % str(timeStamp))
         TicSum = datetime.timedelta(0,0,0)
         Tic = tic()
-    fpath = DIR + dataDir + fname
+    fpath = dataDir + fname
 
     # Get progress bar length
     if verbose > 0:
         timeStamp = ts()
         print('\n[%s] Getting progress bar length.' % str(timeStamp))
-    if not quickMode and verbose:
-        with open(fpath) as f:
-            lines0 = (f.readline().splitlines()[0] for line in f)
-            count = sum(1 for line in lines0)
+        Tic = tic()
+    if verbose > 0:
+        count = getNumLines(fpath, verbose = 0)
     if verbose > 0:
         Toc = toc(Tic)
         TicSum += Toc
 
+    # Validate quickModeLimit
+    if quickMode:
+        quickModeLimit = getQuickModeLimit(quickModeLimit, count)
+
     # Main block
     with open(fpath, 'r') as f:
 
-        # Read file
+        # create generator
+        if quickMode:
+            lineGenerator = (f.readline() for _ in range(quickModeLimit))
+        else:
+            lineGenerator = (f.readline() for _ in range(count))
+        headers=next(lineGenerator)
+
+        # initialize list
+        cidList = []
+        cpiDic = {}
+
+        # The loop depends on the file being used.
+        # fileOrigin = getFileOrigin(fname) # not implemented
+        fileOrigin = 'simpleLinks'
+
+        # Verbose prelude to if block
         if verbose > 0:
             timeStamp = ts()
-            print('\n[%s] Reading file.' % str(timeStamp))
-        if quickMode:
-            lines = (f.readline().splitlines()[0] for line in range(quickModeLimit))
-        else:
-            lines = (f.readline().splitlines()[0] for line in f)
-        headers = next(lines)
+            print('\n[%s] Splitting lines.' % str(timeStamp))
+            Tic = tic()
         if verbose > 0:
+            if quickMode:
+                bar = ChargingBar('', max = quickModeLimit)
+            else:
+                bar = ChargingBar('', max = count)
+        # If block
+        if fileOrigin == 'simpleLinks':
+            for line in lineGenerator:
+                cid, c2, c3  = line.split()
+                cidList.append(cid)
+                if verbose > 0:
+                    bar.next()
+        elif fileOrigin == 'detailedLinks':
+            for line in lineGenerator:
+                cid, c2, c3, c4, c5, c6, c7 = line.split()
+                cidList.append(cid)
+                if verbose > 0:
+                    bar.next()
+        elif fileOrigin == 'actions':
+            for line in lineGenerator:
+                a, b, c3, c4, c5, c6 = line.split()
+                if isCid(a):
+                    cidList.append(a)
+                elif isCid(b):
+                    cidList.append(b)
+                else:
+                    print('This should not be happening!')
+                    sys.exit(0)
+                if verbose > 0:
+                    bar.next()
+    if verbose > 0:
+        bar.finish()
+        Toc = toc(Tic)
+        TicSum += Toc
+
+    # Create set from list
+    if verbose > 0:
+        timeStamp = ts()
+        print('\n[%s] Creating set from list.' % str(timeStamp))
+        Tic = tic()
+    cidList = list(set(cidList))
+    if verbose > 0:
             Toc = toc(Tic)
             TicSum += Toc
 
-        # Split lines
-        if verbose > 0:
-            timeStamp = ts()
-            print('\n[%s] Splitting lines' % str(timeStamp))
-            Tic = tic()
-        if not quickMode and verbose:
-            bar = ChargingBar('', max = count)
-        cidList = []
-        for line in lines:
-            row = line.split('\t')
-            A, B, link, action, bool, score = line[0], line[1], line[2], line[3], line[4], line[5]
-            if isCid(A):
-                cidList.append(A)
-            else:
-                cidList.append(B)
-            if verbose > 0:
-                bar.next()
-        cidList = list(set(cidList))
-        if not quickMode and verbose:
-            bar.finish()
-        if verbose > 0:
-            Toc = toc(Tic)
-            TicSum += Toc
-            timeStamp = ts()
-            print('\n[%s] Done running \'makeCidList\' function.\nTotal elapsed time was %s (h:mm:ss)' % (str(timeStamp), str(TicSum)))
-        if not quickMode and verbose:
-            beep()
+    # Verbose finish
+    if verbose > 0:
+        timeStamp = ts()
+        print('\n[%s] Done running \'makeCidList\' function.\nTotal elapsed time was %s (h:mm:ss)' % (str(timeStamp), str(TicSum)))
 
     # return statement
-    return cidList
+    withHeaders = False
+    if withHeaders:
+        return headers, cidList
+    else:
+        return cidList
 
-def downloadCidSyns(cidList, alarm=alarm1, verbose=0, quickMode=False, quickModeLimit=None):
+def downloadCidSyns(cidList, alarm=alarm1, verbose=0):
     '''
     Download all synonyms for a given list of PubChem Compound ID (CID) numbers using PubChem's PUG REST utility. It takes less than 10 minutes to download all the synonyms for the STITCH CPI database on residential broadband.
 
@@ -248,23 +329,28 @@ def downloadCidSyns(cidList, alarm=alarm1, verbose=0, quickMode=False, quickMode
             alarm, an object (default: alarm = alarm1). This object will be called at the end of the function, when all the synonyms are finished downloading. By default \'alarm1\' is called, which is a series of high and low pitch tones executed in Bash using the operating system.
     OUTPUT: requestResults, a BeautifulSoup4 object.
     '''
+    # verbose start
+    if verbose > 0:
+        timeStamp = ts()
+        print('\n[%s] Running \'downloadCidSyns\' function.' % str(timeStamp))
+        TicSum = datetime.timedelta(0,0,0)
+        Tic = tic()
 
     UserAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/11.1 Safari/605.1.15'
     Headers = {'User-Agent': UserAgent}
 
+    cidList = [int(cid[-8:]) for cid in cidList]
+
     chunkSize = 190 # chunkSize is the number of length-9 CIDs (plus comma) that can fit into a URL, minus the approximately 100 other characters for the PUG request to PubChem servers.
     numChunks = np.ceil(len(cidList)/chunkSize)
-
-    # quickMode; Shorten the list
-    if quickMode:
-        oldNumChunks = numChunks
-        numChunks = int(np.ceil(numChunks * 0.05))
-        print('quickMode\nReplaced old numChunks size (%d) with %d\n' % (oldNumChunks, numChunks))
 
     requestResults = []
 
     # Loop miscellanea
-    bar = ChargingBar('Downloading CID information', max = numChunks)
+    if verbose > 0:
+        timeStamp = ts()
+        print('\n[%s] Downloading CID information.' % str(timeStamp))
+        bar = ChargingBar('', max = numChunks)
     i = 0 # iterations, number of server requests
     j1 = 0 # index dummy variable
     Tic = tic()
@@ -298,13 +384,24 @@ def downloadCidSyns(cidList, alarm=alarm1, verbose=0, quickMode=False, quickMode
             Tic = tic()
 
         # Progress bar
-        bar.next()
-    bar.finish()
-    alarm()
+        if verbose > 0:
+            bar.next()
+    if verbose > 0:
+        bar.finish()
+    if verbose > 0:
+        Toc = toc(Tic)
+        TicSum += Toc
+    if verbose > 1:
+        alarm()
+
+    # Verbose finish
+    if verbose > 0:
+        timeStamp = ts()
+        print('\n[%s] Done running \'makeCidList\' function.\nTotal elapsed time was %s (h:mm:ss)' % (str(timeStamp), str(TicSum)))
 
     return requestResults
 
-def makeChemSynsDic(DIR, cidList, verbose=0, quickMode=None, quickModeLimit=None):
+def makeChemSynsDic(DIR, outDir, cidList, verbose=0):
     '''
     Creates a dictionary of CID (compound ID) synonyms. Synonyms are acquired by
     using the PUG REST utility from PubChem (NIH). Requires internet connection.
@@ -316,14 +413,15 @@ def makeChemSynsDic(DIR, cidList, verbose=0, quickMode=None, quickModeLimit=None
     OUTPUT: chemSynsDic, a dic, the dictionary of CID synonyms (i.e., CID -> chemical name).
             chemSynsRDic, a dic, the dictionary of chemical name synonyms (i.e., chemical name -> CID).
     '''
+    # verbose start
 
     # Download synonyms
-    requestResults = downloadCidSyns(cidList, verbose=0, quickMode=None, quickModeLimit=None)
+    requestResults = downloadCidSyns(cidList, verbose=verbose-1)
 
     # Process html results to list of strings
     chemSynsDic = {}
     for result in requestResults:
-        cid = result.result.text
+        cid = result.cid.text
         syns = [syn.text for syn in result.findAll('synonym')]
         chemSynsDic[cid] = syns
 
@@ -341,14 +439,17 @@ def makeChemSynsDic(DIR, cidList, verbose=0, quickMode=None, quickModeLimit=None
             chemSynsRDic[name] = []
 
     # populate dictionary
-    for cid, listOfNames in namesList:
+    for cid, listOfNames in chemSynsDic.items():
         for name in listOfNames:
             chemSynsRDic[name].append(cid)
 
-    # Pickle chemSynsDic
-    pname = DIR + 'chemSynsDic.pickle'
+    # Pickle dictionaries
+    pname = outDir + 'chemSynsDic.pickle'
     with open(pname, 'wb') as handle:
         pickle.dump(chemSynsDic, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    pname = outDir + 'chemSynsRDic.pickle'
+    with open(pname, 'wb') as handle:
+        pickle.dump(chemSynsRDic, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     return chemSynsDic, chemSynsRDic
 
@@ -623,81 +724,6 @@ def makeLinksDic(DIR, dataDir='STITCH Data/', fname='9606.actions.v5.0.tsv', ver
     # Return statement
     return ctopDic, ptocDic, pairsToLinksDic
 
-def checkDics(DIR, dic1name='protSynsDic', dic2name='ptocDic', elements='keys'):
-    '''
-    Does set operations on two dictionaries.
-    ======================================================================
-    Results for reference:
-    ======================================================================
-    For dictionaries generated from species 9606 (Humans), the following results are obtained:
-
-    linkProts has 0 unique proteins.
-    synsProts has 3105 unique proteins.
-    They share 17352 (84.82%) proteins.
-    ======================================================================
-
-    '''
-    # Rename variables to generic names
-    dic1 = loadPickle(DIR, dic1name)
-    dic2 = loadPickle(DIR, dic2name)
-    dic1keys = set(dic1.keys())
-    dic2keys = set(dic2.keys())
-    print('%s has %d proteins.\n%s has %d %s.' % (dic1name, len(dic1keys), dic2name, len(dic2keys), elements))
-    dic1extra = dic1keys - dic2keys
-    dic2extra = dic2keys - dic1keys
-    common = dic1keys & dic2keys
-    total = dic1keys | dic2keys
-    a, b, t, u = len(dic1extra), len(dic2extra), len(common), len(total)
-    print('%s has %d unique proteins.\n%s has %d unique %s.\nThey share %d (%0.2f%%) of %s.' % (dic1name, a, dic2name, b, elements, t, 100*t/u), elements)
-
-def blocks(file, size=65536):
-    '''
-    From https://stackoverflow.com/a/9631635/5478086
-    '''
-    while True:
-        b = file.read(size)
-        if not b:
-            break
-        yield b
-
-def getNumLines(fname):
-    '''
-    From https://stackoverflow.com/a/9631635/5478086
-    '''
-    with open(fname, 'r', encoding="utf-8", errors='ignore') as f:
-        genObj = (bl.count('\n') for bl in blocks(f))
-        s = sum(genObj)
-        print('%s has %d lines.' % (fname, s))
-
-def getNumLines(fname, verbose=1):
-    '''
-    docstring
-    '''
-    # Verbose start
-    if verbose > 0:
-        TicSum = datetime.timedelta(0,0,0)
-        timeStamp = ts()
-        print('\n[%s] Counting number of lines in %s.' % (str(timeStamp), fname))
-        # spinner = Spinner('')
-        Tic = tic()
-    with open(fname) as f:
-        n = 0
-        lines = (f.readline() for line in f)
-        for line in lines:
-            n += 1
-            if verbose > 0:
-                pass
-                # spinner.next()
-    if verbose > 0:
-        # spinner.finish()
-        Toc = toc(Tic)
-        TicSum += Toc
-
-    # verbose exit
-    if verbose > 0:
-        print('\n[%s] There were %s lines in %s.' % (str(timeStamp), n, fname))
-
-    return n
 
 '''
 ################################################################################
