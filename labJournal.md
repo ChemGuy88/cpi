@@ -2,30 +2,33 @@
 
 ## To-do list
 
-1. Should consider **differentiating DIR** to (DIR, outDIR, dataDIR), where
+- [ ] Fix CID prefix issue
+- [ ] Should consider **differentiating DIR** to (DIR, outDIR, dataDIR), where
   a. DIR is the working directory containing cpi.py,
   b. outDIR is the directory where results are output (e.g., the pickled dictionaries), and
   c. dataDIR is the directory where primary data is located (e.g., the STRING and STITCH files)
-2. **Generalize `make` functions.**  
+- [ ] **Generalize `make` functions.**  
 Some functions are exactly the same except for the core of the loop which does a different operation on each line of the links file. I should create a main function that takes another function to operate on each line. E.g.,:
 
   ```python
   for line in lines:
       output = function(line)
   ```
-3. **Remove usage of loadFile**  
+- [ ] **Remove usage of loadFile**  
 Remove usage of `loadFile` from
   * makeProtSynsDic
   * makeLinksDic
 
-4. **Use `getQuickModeLimit` on applicable functions**  
-  * loadFile  
-  * makeCidList
-  * makeProtSynsDic
-  * makeLinksDic
+- [ ] **Use `getQuickModeLimit` on applicable functions**  
+  - [ ] loadFile  
+  - [ ] makeCidList
+  - [ ] makeProtSynsDic
+  - [ ] makeLinksDic
 
 ## Journal Entries
 
+* [Monday 11/19](#11/19/18)
+* [Friday 11/9](#11/9/18)
 * [Tuesday 11/6](#11/6/18)
 * [Monday 10/29](#10/29/18)
 * [Tuesday 10/23](#10/23/18)
@@ -35,6 +38,25 @@ Remove usage of `loadFile` from
 * [Tuesday 10/9](#10/9/18)
 * [Friday 10/5](#10/5/18)
 * [Monday 10/1](#10/1/18)
+
+### <a name="11/19/18"></a> Monday 11/19
+
+I think the CID numbers that have equivalent m and s results (i.e., point to the same set of proteins), are compounds without stereoisomers, e.g., ethanol, gold, or NaCl. But then should they even have an 'm' number? I'm closer to this answer. Using the function `getCidBags` I am able to compare the protein sets pointed to by each m and s-type CID number. So far I only have count results. Next I will dive into the CID sets that have now been sorted. Below are the count results.
+
+```
+Table illustrating the possible values and combinations of m and s-type CID numbers:
+ _______________________________________________________________
+       m:        x |     None |        x |     None |        x |
+       s:        x |     None |     None |        x |        y |
+
+ Table with results of counting each of the above cases
+ _______________________________________________________________
+     var:     mseq |      ms0 |       m1 |       s1 |      ms1 |
+   count:   329462 |        0 |    29697 |    68164 |    15127 |
+```
+
+The next step is to look at the Python sets returned by `getCidBags`, `mbag`, `sbag`, and `msbag` and see if there's any pattern to how the CID numbers have been sorted. I will have to look up the numbers manually in PUG REST.
+
 
 ### <a name="11/9/18"></a> Friday 11/9
 
