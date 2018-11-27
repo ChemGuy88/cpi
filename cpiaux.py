@@ -357,14 +357,20 @@ def countCidTypes(cpiDic):
 
     return a and b and c
 
-def getCidBags(cpiDic):
+def getCidBags(cpiDic, verbose=1):
     '''
-    Are m and s CIDs equivalent?
+    Returns 4 sets of CID numbers. Each set represents the possible relationship between a CID's m or s label and the proteins it's associated with. The sets are summarized in the table below. Also prints summary tables describing the contents of the bags, and some quality control information to make sure bags were correctly made.
+
+    Table illustrating the possible values and combinations of m and s-type CID numbers. 'x' and 'y' are protein sets.
+     _______________________________________________________________
+       m:        x |     None |        x |     None |        x |
+       s:        x |     None |     None |        x |        y |
     '''
     cidSet = getCidSet(cpiDic)
-    mbag = set()
-    sbag = set()
-    msbag = set()
+    mseqbag = set() # a = x, b = x
+    mbag = set() # a = None, b = x
+    sbag = set() # a = x, b = None
+    msbag = set() # a = x, b = y
     mseq = 0 # a = x, b = x
     m1 = 0 # a = None, b = x
     s1 = 0 # a = x, b = None
@@ -393,23 +399,41 @@ def getCidBags(cpiDic):
                 mbag.add(cid)
                 m1 += 1
         elif a == b:
-            msbag.add(cid)
+            mseqbag.add(cid)
             mseq += 1
         elif a != b:
-            mbag.add(cid)
-            sbag.add(cid)
+            msbag.add(cid)
             ms1 += 1
     lcs = len(cidSet)
     d = lcs - mseq
 
     # QC
     if verbose > 0:
-        print('len(msbag) == mseq # %s' % str(len(msbag) == mseq))
-        print('len(mbag) == m1 + ms1 # %s' % str(len(mbag) == m1 + ms1))
-        print('len(sbag) == s1 + ms1 # %s' % str(len(sbag) == s1 + ms1))
-        print('d == m1 + s1 + ms0 + ms1 # %s' % str(d == m1 + s1 + ms0 + ms1))
+        u = set.union(mseqbag, mbag, sbag, msbag)
+        nmseqm = len(set.intersection(mseqbag, mbag))
+        nmseqs = len(set.intersection(mseqbag, sbag))
+        nmseqms = len(set.intersection(mseqbag, msbag))
+        nms = len(set.intersection(mbag, sbag))
+        nmms = len(set.intersection(mbag, msbag))
+        nsms =len(set.intersection(sbag, msbag))
+        text = '\nintersection of mseqbag and mbag: {}'.format(nmseqm) + \
+               '\nintersection of mseqbag and sbag: {}'.format(nmseqs) + \
+               '\nintersection of mseqbag and msbag: {}'.format(nmseqms) + \
+               '\nintersection of mbag and sbag: {}'.format(nms) + \
+               '\nintersection of mbag and msbag: {}'.format(nmms) + \
+               '\nintersection of sbag and msbag: {}'.format(nsms)
+        print(text)
 
-    text = '%d\t| %d\t| %d\t| %d CID numbers out of %d, or %0.1f%%, have equivalent m and s results. That means %d are unique.' % (mseq, lcs, d, mseq, lcs, mseq/lcs*100, d)
+    # More QC
+    if verbose > 0:
+        print('')
+        print('len(mseqbag) == mseq # {}'.format(len(mseqbag) == mseq))
+        print('len(mbag) == lcs - (mseq + s1 + ms0 + ms1) # {}'.format(len(mbag) == lcs - (mseq + s1 + ms0 + ms1)))
+        print('len(sbag) == lcs - (mseq + m1 + ms0 + ms1) # {}'.format(len(sbag) == lcs - (mseq + m1 + ms0 + ms1)))
+        print('len(msbag) == lcs - (mseq + m1 + s1 + ms0) # {}'.format(len(msbag) == lcs - (mseq + m1 + s1 + ms0)))
+
+    # Summary
+    text = '\n{mseq:>8} | {lcs:>8} | {d:>8} | {mseq} CID numbers out of {lcs}, or {pcnt:.1%}, have equivalent m and s results. That means {d} are unique.'.format(mseq=mseq, lcs=lcs, d=d, pcnt= mseq/lcs)
     print(text)
 
     text1 = '\n\
@@ -426,4 +450,36 @@ def getCidBags(cpiDic):
                                                                    'count:',str(mseq),str(ms0),str(m1),str(s1),str(ms1))
     print(text1)
 
-    return mbag, sbag, msbag
+    return mseqbag, msbag, mbag, sbag
+
+def examineCidProps(cpiDic, chemPropsDic):
+    '''
+    Creates summary tables for the Computed Physical Properties of each CID number type to see if there's a pattern to the CID m and s labels and their physical properties. Running this for all of species 9606 CP interactions yields no obvious pattern.
+    '''
+    mseqbag, msbag, mbag, sbag = getCidBags(cpiDic)
+
+    for bag in [mseqbag, msbag, mbag, sbag]:
+        table = np.zeros((1,6), dtype='int')
+        i = 0
+        j = 0
+        badKeyList = []
+        for cid in bag:
+            if i > 9:
+                break
+            try:
+                props = chemPropsDic[cid]
+                props = np.array(props, dtype='int')
+                table = np.vstack((table, props))
+                i += 1
+            except:
+                j += 1
+                badKeyList.append(cid)
+        table = np.delete(table,0,0)
+        print('\nmean:')
+        print(table.mean(0))
+        print('min:')
+        print(table.min(0))
+        print('max:')
+        print(table.max(0))
+        print('Number of key errors: %d' % j)
+        print('Bad keys: '+', '.join(badKeyList))
