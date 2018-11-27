@@ -321,7 +321,136 @@ def makeCidList(DIR, dataDir, outDir, fname='9606.protein_chemical.links.v5.0.ts
     else:
         return cidList
 
-def downloadCidSyns(cidList, alarm=alarm1, verbose=0):
+def makeCpiDic(DIR, dataDir, outDir, fname='9606.protein_chemical.links.v5.0.tsv', verbose=0, quickMode=False, quickModeLimit=.1):
+    '''
+    The code is a clone of makeCidList, but the if-block inside the for loop is different.
+    '''
+    # verbose start
+    if verbose > 0:
+        timeStamp = ts()
+        print('\n[%s] Running prototype for \'makeCpiDic\' function.' % str(timeStamp))
+        TicSum = datetime.timedelta(0,0,0)
+        Tic = tic()
+    fpath = dataDir + fname
+
+    # Get progress bar length
+    if verbose > 0:
+        timeStamp = ts()
+        print('\n[%s] Getting progress bar length.' % str(timeStamp))
+        Tic = tic()
+    if verbose > 0:
+        count = getNumLines(fpath, verbose = 0)
+    if verbose > 0:
+        Toc = toc(Tic)
+        TicSum += Toc
+
+    # Validate quickModeLimit
+    if quickMode:
+        quickModeLimit = getQuickModeLimit(quickModeLimit, count)
+
+    # Main block
+    with open(fpath, 'r') as f:
+
+        # create generator
+        if quickMode:
+            lineGenerator = (f.readline() for _ in range(quickModeLimit))
+        else:
+            lineGenerator = (f.readline() for _ in range(count))
+        headers=next(lineGenerator)
+
+        # initialize list
+        cpiDic = {}
+        cpiRDic = {}
+
+        # The loop depends on the file being used.
+        # fileOrigin = getFileOrigin(fname) # not implemented
+        fileOrigin = 'simpleLinks'
+
+        # Verbose prelude to if block
+        if verbose > 0:
+            timeStamp = ts()
+            print('\n[%s] Splitting lines.' % str(timeStamp))
+            Tic = tic()
+        if verbose > 0:
+            if quickMode:
+                bar = ChargingBar('', max = quickModeLimit)
+            else:
+                bar = ChargingBar('', max = count)
+        # If block
+        if fileOrigin == 'simpleLinks':
+            for line in lineGenerator:
+                cid, c2, c3  = line.split()
+                try:
+                    cpiDic[cid].append(c2)
+                except KeyError:
+                    cpiDic[cid] = [c2]
+                # RDic
+                try:
+                    cpiRDic[c2].append(cid)
+                except KeyError:
+                    cpiRDic[c2] = [cid]
+                if verbose > 0:
+                    bar.next()
+        elif fileOrigin == 'detailedLinks':
+            for line in lineGenerator:
+                cid, c2, c3, c4, c5, c6, c7 = line.split()
+                try:
+                    cpiDic[cid].append(c2)
+                except KeyError:
+                    cpiDic[cid] = [c2]
+                # RDic
+                try:
+                    cpiRDic[c2].append(cid)
+                except KeyError:
+                    cpiRDic[c2] = [cid]
+                if verbose > 0:
+                    bar.next()
+        elif fileOrigin == 'actions':
+            for line in lineGenerator:
+                a, b, c3, c4, c5, c6 = line.split()
+                if isCid(a):
+                    try:
+                        cpiDic[a].append(b)
+                    except KeyError:
+                        cpiDic[a] = [b]
+                    # RDic
+                    try:
+                        cpiRDic[b].append(a)
+                    except KeyError:
+                        cpiRDic[b] = [a]
+                elif isCid(b):
+                    try:
+                        cpiDic[b].append(a)
+                    except KeyError:
+                        cpiDic[b] = [a]
+                    # RDic
+                    try:
+                        cpiRDic[a].append(b)
+                    except KeyError:
+                        cpiRDic[a] = [b]
+                else:
+                    print('This should not be happening!')
+                    sys.exit(0)
+                if verbose > 0:
+                    bar.next()
+    if verbose > 0:
+        bar.finish()
+        Toc = toc(Tic)
+        TicSum += Toc
+
+    # Verbose finish
+    if verbose > 0:
+        timeStamp = ts()
+        print('\n[%s] Done running protoype for \'makeCpiDic\' function.\nTotal elapsed time was %s (h:mm:ss)' % (str(timeStamp), str(TicSum)))
+
+    # return statement
+    withHeaders = False
+    if withHeaders:
+        return headers, cpiDic
+    else:
+        return cpiDic
+
+def downloadCidSyns(cidList, mineType='synonyms', alarm=alarm1, verbose=0):
     '''
     Download all synonyms for a given list of PubChem Compound ID (CID) numbers using PubChem's PUG REST utility. It takes less than 10 minutes to download all the synonyms for the STITCH CPI database on residential broadband.
 
@@ -335,6 +464,8 @@ def downloadCidSyns(cidList, alarm=alarm1, verbose=0):
         print('\n[%s] Running \'downloadCidSyns\' function.' % str(timeStamp))
         TicSum = datetime.timedelta(0,0,0)
         Tic = tic()
+
+    mineType = mineType.lower()
 
     UserAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/11.1 Safari/605.1.15'
     Headers = {'User-Agent': UserAgent}
@@ -361,10 +492,16 @@ def downloadCidSyns(cidList, alarm=alarm1, verbose=0):
         j1 = int(min( len(cidList), (num+1) * chunkSize)) # ending position index
         tempList = cidList[j0:j1]
         cidChunk = ','.join([str(element) for element in tempList])
-        URL = 'https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/'+cidChunk+'/synonyms/XML'
+        if mineType == 'synonyms':
+            URL = 'https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/'+cidChunk+'/synonyms/XML'
+        elif mineType == 'properties':
+            URL = 'https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/'+cidChunk+'/property/AtomStereoCount,DefinedAtomStereoCount,UndefinedAtomStereoCount,BondStereoCount,DefinedBondStereoCount,UndefinedBondStereoCount/XML'
         R = requests.get(URL, headers = Headers)
         soup = BeautifulSoup(R.text, 'lxml')
-        Found = soup.findAll('information')
+        if mineType == 'synonyms':
+            Found = soup.findAll('information')
+        elif mineType == 'properties':
+            Found = soup.findAll('properties')
         requestResults.extend(Found) # append results for processing later
 
         # PubChem requires that no more than 5 requests be made per second
@@ -375,6 +512,7 @@ def downloadCidSyns(cidList, alarm=alarm1, verbose=0):
                 time.sleep(1)
                 i = 0
                 Tic = tic()
+                TicSum += Toc
             elif i < 5:
                 pass
             elif i > 5:
@@ -382,6 +520,7 @@ def downloadCidSyns(cidList, alarm=alarm1, verbose=0):
         elif Toc.total_seconds() > 1:
             i = 1
             Tic = tic()
+            TicSum += Toc
 
         # Progress bar
         if verbose > 0:
@@ -397,11 +536,11 @@ def downloadCidSyns(cidList, alarm=alarm1, verbose=0):
     # Verbose finish
     if verbose > 0:
         timeStamp = ts()
-        print('\n[%s] Done running \'makeCidList\' function.\nTotal elapsed time was %s (h:mm:ss)' % (str(timeStamp), str(TicSum)))
+        print('\n[%s] Done running \'downloadCidSyns\' function.\nTotal elapsed time was %s (h:mm:ss)' % (str(timeStamp), str(TicSum)))
 
     return requestResults
 
-def makeChemSynsDic(DIR, outDir, cidList, verbose=0):
+def makeChemSynsDic(DIR, outDir, cidList, modeType='synonyms', verbose=0):
     '''
     Creates a dictionary of CID (compound ID) synonyms. Synonyms are acquired by
     using the PUG REST utility from PubChem (NIH). Requires internet connection.
@@ -414,35 +553,32 @@ def makeChemSynsDic(DIR, outDir, cidList, verbose=0):
             chemSynsRDic, a dic, the dictionary of chemical name synonyms (i.e., chemical name -> CID).
     '''
     # verbose start
+    modeType = modeType.lower()
 
     # Download synonyms
-    requestResults = downloadCidSyns(cidList, verbose=verbose-1)
+    requestResults = downloadCidSyns(cidList, mineType=modeType, verbose=verbose-1)
 
     # Process html results to list of strings
     chemSynsDic = {}
+    chemSynsRDic = {}
     for result in requestResults:
         cid = result.cid.text
-        syns = [syn.text for syn in result.findAll('synonym')]
-        chemSynsDic[cid] = syns
-
-    # create set of chemical names
-    namesList = []
-    for listOfNames in chemSynsDic.values():
-        for name in listOfNames:
-            namesList.append(name)
-    namesList = set(namesList)
-
-    # prime reverse dictionary
-    chemSynsRDic = {}
-    for namesList in chemSynsDic.values():
-        for name in namesList:
-            chemSynsRDic[name] = []
-
-    # populate dictionary
-    for cid, listOfNames in chemSynsDic.items():
-        for name in listOfNames:
-            chemSynsRDic[name].append(cid)
-
+        if modeType == 'synonyms':
+            resultList = [syn.text for syn in result.findAll('synonym')]
+        if modeType == 'properties':
+            resultList = [syn.text for syn in result.findAll(['atomstereocount','definedatomstereocount','undefinedatomstereocount','bondstereocount','definedbondstereocount','undefinedbondstereocount'])]
+        try:
+            chemSynsDic[cid].extend(resultList)
+        except KeyError:
+            chemSynsDic[cid] = resultList
+        # RDic
+        if modeType == 'synonyms':
+            for synonym in resultList:
+                try:
+                    chemSynsRDic[synonym].append(cid)
+                else:
+                    chemSynsRDic[synonym] = cid
+                
     # Pickle dictionaries
     pname = outDir + 'chemSynsDic.pickle'
     with open(pname, 'wb') as handle:
