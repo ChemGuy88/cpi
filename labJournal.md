@@ -1,15 +1,18 @@
 # Lab Journal for CPI
 
 ## To-do list
-
+- [ ] Test `makeCpiDic`
+- [ ] Test `makeChemSynsDic`
 - [ ] Fix CID prefix issue
+  - [ ] See if the CIDs from `countCidTypes2` that are in the `ms` bag point to the same protein sets.
+
+## Wishlist
 - [ ] Should consider **differentiating DIR** to (DIR, outDIR, dataDIR), where
   a. DIR is the working directory containing cpi.py,
   b. outDIR is the directory where results are output (e.g., the pickled dictionaries), and
   c. dataDIR is the directory where primary data is located (e.g., the STRING and STITCH files)
 - [ ] **Generalize `make` functions.**  
 Some functions are exactly the same except for the core of the loop which does a different operation on each line of the links file. I should create a main function that takes another function to operate on each line. E.g.,:
-
   ```python
   for line in lines:
       output = function(line)
@@ -18,15 +21,22 @@ Some functions are exactly the same except for the core of the loop which does a
 Remove usage of `loadFile` from
   * makeProtSynsDic
   * makeLinksDic
-
 - [ ] **Use `getQuickModeLimit` on applicable functions**  
-  - [ ] loadFile  
   - [ ] makeCidList
   - [ ] makeProtSynsDic
   - [ ] makeLinksDic
+  - [ ] loadFile  
+- [ ] Iteratively import modules on `cpirun.py`. See this [link](https://www.tutorialspoint.com/Can-we-iteratively-import-python-modules-inside-a-for-loop).
+- [ ] Display molecule images on a second column besides the tables from (#11/23/18)
 
 ## Journal Entries
 
+* [Monday 11/26](#11/26/18)
+* [Sunday 11/25](#11/25/18)
+* [Saturday 11/24](#11/24/18)
+* [Friday 11/23](#11/23/18)
+* [Wednesday 11/21](#11/21/18)
+* [Tuesday 11/20](#11/20/18)
 * [Monday 11/19](#11/19/18)
 * [Friday 11/9](#11/9/18)
 * [Tuesday 11/6](#11/6/18)
@@ -38,6 +48,189 @@ Remove usage of `loadFile` from
 * [Tuesday 10/9](#10/9/18)
 * [Friday 10/5](#10/5/18)
 * [Monday 10/1](#10/1/18)
+
+## [Completed To-do list](#CompletedToDoList)
+
+### <a name="11/27/18"></a> Tuesday 11/27
+
+Project put on hold in favor of a word-embedding project.
+
+### <a name="11/26/18"></a> Monday 11/26
+
+PubChem can have separate entries for left and right-handed enantiomers for some of their compounds, but not all. For example, [Thalidomide](https://www.acs.org/content/acs/en/molecule-of-the-week/archive/t/thalidomide.html) has three entries, one each for the left and right-handed enantiomers, and one without a specified stereochemistry. Another chemical, bromochlorofluoroethane, does not have such special treatment, and instead has only one entry with an undefined stereochemistry. I don't know if that's because there's no known synthetic path to isolate the enantiomers, i.e., the enantiomers don't exist. Consider also bromochlorofluoroiodomethane, which according to Wikipedia is a "hypothetical" chemical, and bromochlorofluoromethane. The former is listed in PubChem, but only with an undefined stereochemistry, while the latter has all three possible entries in PubChem, the two defined stereoisomers and the one undefined stereoisomer.
+
+| Compound | Compound ID | Enantiomers Available on PubChem |
+|----------|-------------|----------------------------------|
+| Thalidomide     | [`00005426`](https://pubchem.ncbi.nlm.nih.gov/compound/5426#section=Top) | Yes |
+| (S)-Thalidomide | [`00092142`](https://pubchem.ncbi.nlm.nih.gov/compound/92142#section=Top) | Yes |
+| (R)-Thalidomide | [`00075792`](https://pubchem.ncbi.nlm.nih.gov/compound/75792#section=Top) | Yes |
+| bromochlorofluoroethane | [`57450899`](https://pubchem.ncbi.nlm.nih.gov/compound/57450899#section=Top) | No |
+| | | |
+| Bromochlorofluoromethane | [`00079058`](https://pubchem.ncbi.nlm.nih.gov/compound/79058) | Yes |
+| (S)-Bromochlorofluoromethane | [`57518772`](https://pubchem.ncbi.nlm.nih.gov/compound/57518772) | Yes |
+| (R)-Bromochlorofluoromethane | [`57518771`](https://pubchem.ncbi.nlm.nih.gov/compound/57518771) | Yes |
+| Bromo(Chloro)Fluoro(Iodo)Methane | [`57424940`](https://pubchem.ncbi.nlm.nih.gov/compound/57424940) | No |
+
+Here's something else of interest. Searching the CID of all three Thalidomide entries in `cpidDic` gives the following results:
+
+```Python
+Thalidomide_x_m = cpiDic['CIDm00005426']
+Thalidomide_x_s = cpiDic['CIDs00005426']
+# Thalidomide_s_m = cpiDic['CIDm00092142'] # KeyError
+Thalidomide_s_s = cpiDic['CIDs00092142']
+# Thalidomide_r_m = cpiDic['CIDm00075792'] # KeyError
+# Thalidomide_r_s = cpiDic['CIDs00075792'] # KeyError
+
+Thalidomide_x_m == Thalidomide_x_s # True
+Thalidomide_x_m == Thalidomide_s_s # False
+```
+
+After putting off the CID prefix issue I started working on the dictionaries again. While rewriting the `makeChemSynsDic` function it occurred to me that that function was overwriting results for the same CID. I wonder if it will be different after I finish rewriting it. I.e., the old cold was:
+
+```python
+chemSynsDic[cid] = listOfSynonyms
+```
+
+instead of
+
+```python
+try:
+    chemSynsDic[cid].append(resultResult)
+except KeyError:
+    chemSynsDic[cid] = [resultResult]
+```
+
+Also updated `makeCpiDic` to return reverse dictionary.
+
+Next, I need to test `makeCpiDic` and `makeChemSynsDic` to make sure the updates work.
+
+### <a name="11/25/18"></a> Sunday 11/25
+
+At first glance the bags have no apparent pattern.
+
+```
+bag: mseq
+  mean:
+  [1.4 1.2 0.2 0.1 0.1 0. ]
+  min:
+  [0 0 0 0 0 0]
+  max:
+  [4 4 1 1 1 0]
+  Number of key errors: 1
+  Bad keys: 05318656
+
+bag: ms
+  mean:
+  [2.9 1.7 1.2 0.2 0.2 0. ]
+  min:
+  [0 0 0 0 0 0]
+  max:
+  [11  6  5  1  1  0]
+  Number of key errors: 7
+  Bad keys: 09861986, 00065153, 00456846, 01819399, 03109913, 06918304, 00017793
+
+bag: m
+  mean:
+  [4.9 4.5 0.4 0.3 0.3 0. ]
+  min:
+  [0 0 0 0 0 0]
+  max:
+  [17 17  2  1  1  0]
+  Number of key errors: 3
+  Bad keys: 00090173, 00102175, 05284237
+
+bag: s
+  mean:
+  [5.6 3.8 1.8 0.  0.  0. ]
+  min:
+  [2 0 0 0 0 0]
+  max:
+  [20 20  8  0  0  0]
+  Number of key errors: 5
+  Bad keys: 00044568, 00130001, 05351908, 00007528, 00000207
+```
+
+### <a name="11/24/18"></a> Saturday 11/24
+
+Edited `downloadCidSyns` to also scrape Computed Physical Properties from PUG REST. Edited `makeChemSynsDic` to parse the corresponding scraped information. I just have to analyze it to see if a pattern emerges that corresponds to the m and s labels.
+
+### <a name="11/23/18"></a> Friday 11/23
+
+PubChem has useful information about a compound's stereochemistry under "4 Chemical and Physical Properties: 4.1 Computed Properties". I can thus programmatically use this information to elucidate some pattern in which the "m" and "s" labels are assigned.
+
+#### Tables of Groupings
+
+What follows is a series of tables. Each table has 5 compounds from each possible CID label combination described in the table from [Wednesday 11/19](#11/19/18). "None" under "Stereochemistry" means that it has no chiral centers and so the molecule has no stereoisomers.
+
+###### Numbers that are both m and s-types **AND** point to the same set of proteins (`mseq`)
+
+| CID Number | Stereochemistry | Note |
+|------------|-----------------|------|
+| 00128493 | None | |
+| 04348756 | None | |
+| 25227472 | None | |
+| 46230909 | None | |
+| 66759619 | None | ||
+
+<figure>
+    <div style="text-align:center"><img width="200" height="200" align="middle" src='/labJournalDiagrams/mseq/00128493.png' />
+    <font size="2" align="center"><figcaption> Figure 2: 00128493 </figcaption></font></div>
+</figure>
+<figure>
+    <div style="text-align:center"><img width="200" height="200" align="middle" src='/labJournalDiagrams/mseq/04348756.png' />
+    <font size="2" align="center"><figcaption> Figure 2: 04348756 </figcaption></font></div>
+</figure>
+<figure>
+    <div style="text-align:center"><img width="200" height="200" align="middle" src='/labJournalDiagrams/mseq/25227472.png' />
+    <font size="2" align="center"><figcaption> Figure 2: 25227472 </figcaption></font></div>
+</figure>
+<figure>
+    <div style="text-align:center"><img width="200" height="200" align="middle" src='/labJournalDiagrams/mseq/46230909.png' />
+    <font size="2" align="center"><figcaption> Figure 2: 46230909 </figcaption></font></div>
+</figure>
+<figure>
+    <div style="text-align:center"><img width="200" height="200" align="middle" src='/labJournalDiagrams/mseq/66759619.png' />
+    <font size="2" align="center"><figcaption> Figure 2: 66759619 </figcaption></font></div>
+</figure>  
+
+###### Numbers that are both m and s-types (`msbag`) **BUT** do not point to the same set of proteins
+
+| CID Number | Stereochemistry | Note |
+|----------|-------------------|------|
+| 00073410 | Yes | "Conformer generation is disallowed since too many atoms" |
+| 09801471 | Enantiomeric | |
+| 11611496 | Yes | |
+| 16129736 | Yes | "Conformer generation is disallowed since too many atoms" |
+| 44273465 | Yes | ||
+
+
+###### m-type CID numbers (`mbag`)
+
+| CID Number | Stereochemistry | Note |
+|----------|-------------------|------|
+| 00002813 | None | |
+| 00191957 | None | |
+| 00557441 | Unknown | "Conformer generation is disallowed since too many undefined stereo centers" |
+| 10162715 | Yes | Trans and a chiral center |
+| 24951130 | Yes | ||
+
+###### s-type CID numbers (`mbag`)
+
+| CID Number | Stereochemistry | Note |
+|----------|-------------------|------|
+| 09576097 | Yes | |
+| 44327287 | Enantiomeric | |
+| 44370954 | Yes | |
+| 54036959 | Yes | |
+| 90832670 | Yes | ||
+
+### <a name="11/21/18"></a> Wednesday 11/21
+
+Fixed `getCidBags`.
+
+### <a name="11/20/18"></a> Tuesday 11/20
+
+Apparently my `getCidBags` function didn't work. The intersection of `mbag` and `sbag` has 15,000 numbers, or about 13% of their union (112,988).
 
 ### <a name="11/19/18"></a> Monday 11/19
 
@@ -291,3 +484,8 @@ They share 17352 (84.82%) proteins.
 ```
 
 It is obvious from these results that all the interaction proteins (from species 9606) are in the synonyms dictionary (from species 9606). But not all proteins are said to have interactions. This raises the
+
+## <a name="CompletedToDoList"></a> Completed To-do list
+- [x] **Place `TicSum` in `downloadCidSyns` under for-loop**
+- [ ] Fix CID prefix issue
+  - [x] See if the CIDs from `countCidTypes2` that are in the `ms` bag point to the same protein sets.
