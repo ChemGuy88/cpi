@@ -4,7 +4,6 @@
 - [ ] Test `makeCpiDic`
 - [ ] Test `makeChemSynsDic`
 - [ ] Fix CID prefix issue
-  - [ ] See if the CIDs from `countCidTypes2` that are in the `ms` bag point to the same protein sets.
 
 ## Wishlist
 - [ ] Should consider **differentiating DIR** to (DIR, outDIR, dataDIR), where
@@ -214,7 +213,7 @@ What follows is a series of tables. Each table has 5 compounds from each possibl
 | 10162715 | Yes | Trans and a chiral center |
 | 24951130 | Yes | ||
 
-###### s-type CID numbers (`mbag`)
+###### s-type CID numbers (`sbag`)
 
 | CID Number | Stereochemistry | Note |
 |----------|-------------------|------|
@@ -483,7 +482,7 @@ They share 17352 (84.82%) proteins.
 ======================================================================
 ```
 
-It is obvious from these results that all the interaction proteins (from species 9606) are in the synonyms dictionary (from species 9606). But not all proteins are said to have interactions. This raises the
+It is obvious from these results that all the interaction proteins (from species 9606) are in the synonyms dictionary (from species 9606). But not all proteins are said to have interactions. This raises the question of whether the dictionary is complete or was made incorrectly.
 
 ## <a name="CompletedToDoList"></a> Completed To-do list
 - [x] **Place `TicSum` in `downloadCidSyns` under for-loop**
