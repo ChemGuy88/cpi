@@ -172,23 +172,23 @@ What follows is a series of tables. Each table has 5 compounds from each possibl
 | 66759619 | None | ||
 
 <figure>
-    <div style="text-align:center"><img width="200" height="200" align="middle" src='/labJournalDiagrams/mseq/00128493.png' />
+    <div style="text-align:center"><img width="200" height="200" align="middle" src='labJournalDiagrams/mseq/00128493.png' />
     <font size="2" align="center"><figcaption> Figure 2: 00128493 </figcaption></font></div>
 </figure>
 <figure>
-    <div style="text-align:center"><img width="200" height="200" align="middle" src='/labJournalDiagrams/mseq/04348756.png' />
+    <div style="text-align:center"><img width="200" height="200" align="middle" src='labJournalDiagrams/mseq/04348756.png' />
     <font size="2" align="center"><figcaption> Figure 2: 04348756 </figcaption></font></div>
 </figure>
 <figure>
-    <div style="text-align:center"><img width="200" height="200" align="middle" src='/labJournalDiagrams/mseq/25227472.png' />
+    <div style="text-align:center"><img width="200" height="200" align="middle" src='labJournalDiagrams/mseq/25227472.png' />
     <font size="2" align="center"><figcaption> Figure 2: 25227472 </figcaption></font></div>
 </figure>
 <figure>
-    <div style="text-align:center"><img width="200" height="200" align="middle" src='/labJournalDiagrams/mseq/46230909.png' />
+    <div style="text-align:center"><img width="200" height="200" align="middle" src='labJournalDiagrams/mseq/46230909.png' />
     <font size="2" align="center"><figcaption> Figure 2: 46230909 </figcaption></font></div>
 </figure>
 <figure>
-    <div style="text-align:center"><img width="200" height="200" align="middle" src='/labJournalDiagrams/mseq/66759619.png' />
+    <div style="text-align:center"><img width="200" height="200" align="middle" src='labJournalDiagrams/mseq/66759619.png' />
     <font size="2" align="center"><figcaption> Figure 2: 66759619 </figcaption></font></div>
 </figure>  
 
@@ -406,7 +406,7 @@ Here's an idea on how to build my corpus, based on [previous notes](#10/5/18).
 
 To illustrate:  
 
-![venDiagram](/labJournalDiagrams/venDiagram.png)
+![venDiagram](labJournalDiagrams/venDiagram.png)
 
 
 ### <a name="10/11/18"></a> Thursday 10/11
